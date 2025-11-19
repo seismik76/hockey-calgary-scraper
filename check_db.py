@@ -1,30 +1,19 @@
-from sqlalchemy import create_engine, text
-import pandas as pd
+from sqlalchemy.orm import Session
+from database import SessionLocal
+from models import Team, Community
 
-DB_URL = "sqlite:///hockey_calgary.db"
-engine = create_engine(DB_URL)
-
-def check_data():
-    with engine.connect() as conn:
-        # Check Leagues
-        print("--- Leagues in DB ---")
-        result = conn.execute(text("SELECT name, type FROM leagues"))
-        leagues = result.fetchall()
-        for l in leagues:
-            print(l)
-            
-        # Check Standings count by League
-        print("\n--- Standings Count by League ---")
-        query = """
-        SELECT l.name, COUNT(st.id) as count
-        FROM standings st
-        JOIN leagues l ON st.league_id = l.id
-        GROUP BY l.name
-        """
-        result = conn.execute(text(query))
-        counts = result.fetchall()
-        for c in counts:
-            print(c)
+def check_communities():
+    db = SessionLocal()
+    communities = db.query(Community).order_by(Community.name).all()
+    
+    print(f"Found {len(communities)} communities.")
+    for c in communities:
+        team_count = db.query(Team).filter_by(community_id=c.id).count()
+        example_team = db.query(Team).filter_by(community_id=c.id).first()
+        team_name = example_team.name if example_team else "None"
+        print(f"'{c.name}' ({team_count} teams) - Ex: {team_name}")
+        
+    db.close()
 
 if __name__ == "__main__":
-    check_data()
+    check_communities()

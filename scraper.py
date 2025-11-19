@@ -192,8 +192,10 @@ def get_seasons_for_league(league_url):
         text = option.get_text(strip=True)
         if value and '/season/' in value:
             season_slug = value.split('/season/')[-1]
+            # Normalize season name (e.g. 2025/2026 -> 2025-2026)
+            normalized_name = text.replace('/', '-')
             seasons.append({
-                'name': text,
+                'name': normalized_name,
                 'slug': season_slug,
                 'url': f"{BASE_URL}{value}"
             })
@@ -451,6 +453,10 @@ def save_standings(db, data, season, league, community_map):
         team_name = entry['team']
         comm_name = normalize_community_name(team_name, community_map)
         
+        if not comm_name:
+            # Skip teams that don't belong to allowed communities
+            continue
+
         community = db.query(Community).filter_by(name=comm_name).first()
         if not community:
             community = Community(name=comm_name)

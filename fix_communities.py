@@ -32,6 +32,21 @@ def fix_communities():
             # print(f"Updated {team.name} -> {new_comm_name}")
             
     db.commit()
+    
+    # Cleanup empty communities
+    print("Cleaning up empty communities...")
+    empty_communities = []
+    all_communities = db.query(Community).all()
+    for c in all_communities:
+        if not c.teams:
+            empty_communities.append(c)
+            
+    for c in empty_communities:
+        db.delete(c)
+        
+    db.commit()
+    print(f"Removed {len(empty_communities)} empty communities.")
+    
     db.close()
     print(f"Fixed {updated_count} team mappings.")
 

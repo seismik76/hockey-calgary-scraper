@@ -118,7 +118,15 @@ selected_ages = st.sidebar.multiselect("Age Category", age_categories, default=d
 
 # Community Filter
 all_communities = sorted(df['Community'].unique().tolist())
-selected_communities = st.sidebar.multiselect("Select Communities", all_communities, default=all_communities[:5])
+selected_communities = st.sidebar.multiselect("Select Communities", all_communities, default=all_communities)
+
+# League Filter
+available_leagues = sorted(df[
+    (df['Season'].isin(selected_seasons)) &
+    (df['Type'].isin(selected_types)) & 
+    (df['Age Category'].isin(selected_ages))
+]['League'].unique().tolist())
+selected_leagues = st.sidebar.multiselect("Select Leagues (Optional)", available_leagues, default=[])
 
 # Team Filter (Optional)
 # Filter teams based on selected communities to avoid too many options
@@ -136,6 +144,9 @@ filtered_df = df[
     (df['Age Category'].isin(selected_ages)) &
     (df['Community'].isin(selected_communities))
 ]
+
+if selected_leagues:
+    filtered_df = filtered_df[filtered_df['League'].isin(selected_leagues)]
 
 if selected_teams:
     filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
