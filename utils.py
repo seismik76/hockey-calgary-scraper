@@ -30,10 +30,15 @@ def normalize_community_name(team_name, mapping=None):
     base_name = re.sub(r'\s+\d+$', '', team_name)
     
     # Remove trailing colors (common ones)
-    colors = ['Red', 'Blue', 'White', 'Black', 'Gold', 'Silver', 'Green', 'Yellow']
+    colors = [
+        'Red', 'Blue', 'White', 'Black', 'Gold', 'Silver', 'Green', 'Yellow', 
+        'Grey', 'Gray', 'Orange', 'Teal', 'Navy', 'Maroon', 'Purple', 'Pink', 
+        'Lime', 'Cyan', 'Magenta', 'Brown', 'Beige', 'Royal', 'Sky'
+    ]
     for color in colors:
-        if base_name.endswith(' ' + color):
-            base_name = base_name[:-len(color)-1]
+        # Case insensitive check for color at the end
+        if re.search(r'\b' + re.escape(color) + r'$', base_name, re.IGNORECASE):
+            base_name = re.sub(r'\s+\b' + re.escape(color) + r'$', '', base_name, flags=re.IGNORECASE)
             break
             
     # Remove trailing numbers again if color was removed

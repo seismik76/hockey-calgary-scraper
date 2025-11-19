@@ -10,6 +10,7 @@ def export_to_csv():
     query = """
     SELECT 
         s.name as Season,
+        l.type as Type,
         l.name as League,
         c.name as Community,
         t.name as Team,
@@ -26,12 +27,12 @@ def export_to_csv():
     JOIN leagues l ON st.league_id = l.id
     JOIN teams t ON st.team_id = t.id
     JOIN communities c ON t.community_id = c.id
-    ORDER BY s.name DESC, l.name, st.pts DESC
+    ORDER BY s.name DESC, l.type, l.name, st.pts DESC
     """
     
     df = pd.read_sql(query, engine)
-    df.to_csv("hockey_calgary_stats.csv", index=False)
-    print("Data exported to hockey_calgary_stats.csv")
+    df.to_csv("hockey_calgary_stats_v2.csv", index=False)
+    print("Data exported to hockey_calgary_stats_v2.csv")
 
 if __name__ == "__main__":
     export_to_csv()

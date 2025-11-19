@@ -14,7 +14,8 @@ class League(Base):
     name = Column(String, nullable=False) # e.g., "U11 Tier 1"
     slug = Column(String, nullable=False) # e.g., "u11-tier-1"
     stream = Column(String, nullable=False) # e.g., "community-council"
-    __table_args__ = (UniqueConstraint('slug', 'stream', name='_league_slug_stream_uc'),)
+    type = Column(String, default='Regular') # 'Regular', 'Playoff', 'Tournament', 'Pre-season'
+    __table_args__ = (UniqueConstraint('slug', 'stream', 'type', name='_league_slug_stream_type_uc'),)
 
 class Community(Base):
     __tablename__ = 'communities'
