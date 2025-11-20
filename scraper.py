@@ -10,9 +10,13 @@ from collections import defaultdict
 import re
 import json
 
+import concurrent.futures
+import threading
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 BASE_URL = "https://www.hockeycalgary.ca"
+db_lock = threading.Lock()
 
 def get_soup(url):
     try:
@@ -589,79 +593,44 @@ def save_standings(db, data, season, league, community_map):
         
         db.commit()
 
-def sync_data():
-    init_db()
+def process_league(league_info, community_map, processed_leagues, processed_lock):
+    # Create a new session for this thread
     db = SessionLocal()
     
-    community_map = load_community_map()
-    
-    # 1. Fetch Legacy/Historical Leagues (from hockeycalgary.ca)
-    print("Fetching legacy/historical leagues...")
-    legacy_leagues = get_leagues() # Current season
-    
-    # Add historical seasons
-    historical_years = ["2023-2024", "2022-2023", "2021-2022", "2020-2021"]
-    for year in historical_years:
-        print(f"Fetching legacy leagues for {year}...")
-        legacy_leagues.extend(get_leagues(year))
-        
-    print(f"Found {len(legacy_leagues)} legacy leagues (total).")
-    
-    # 2. Fetch RAMP Leagues (U11)
-    print("Fetching RAMP leagues (U11)...")
-    ramp_leagues = get_ramp_leagues()
-    print(f"Found {len(ramp_leagues)} RAMP leagues.")
-    
-    # 3. Fetch TeamLinkt Leagues (U13+)
-    print("Fetching TeamLinkt leagues (U13+)...")
-    teamlinkt_leagues = get_teamlinkt_leagues()
-    print(f"Found {len(teamlinkt_leagues)} TeamLinkt leagues.")
-    
-    all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
-    
-    known_seasons = set()
-    processed_leagues = set() # Track processed leagues to avoid duplicates
-    
-    for league_info in all_leagues:
-        # Create a unique key for the league to avoid re-processing identical leagues found in multiple places
+    try:
         league_key = f"{league_info['slug']}-{league_info['stream']}-{league_info['type']}"
         
-        # Note: We don't skip if processed because we might be processing the same league for a DIFFERENT season context
-        # Actually, get_seasons_for_league fetches ALL seasons for that league URL.
-        # So if we process 'u11-hadp' once, we get all its seasons.
-        # However, the URL might be different if scraped from a historical page?
-        # Let's check: /standings/index/stream/community-council/league/u11-hadp is the same URL.
-        
-        if league_key in processed_leagues and league_info['stream'] not in ['RAMP', 'TeamLinkt']:
-             continue
-             
-        processed_leagues.add(league_key)
+        with processed_lock:
+            if league_key in processed_leagues and league_info['stream'] not in ['RAMP', 'TeamLinkt']:
+                return
+            processed_leagues.add(league_key)
         
         print(f"Processing {league_info['name']} ({league_info['stream']})...")
         
         # Get or create League
-        league = db.query(League).filter_by(
-            slug=league_info['slug'], 
-            stream=league_info['stream'],
-            type=league_info['type']
-        ).first()
-        
-        if not league:
-            league = League(
-                name=league_info['name'], 
+        with db_lock:
+            league = db.query(League).filter_by(
                 slug=league_info['slug'], 
                 stream=league_info['stream'],
                 type=league_info['type']
-            )
-            db.add(league)
-            db.commit()
-            db.refresh(league)
+            ).first()
+            
+            if not league:
+                league = League(
+                    name=league_info['name'], 
+                    slug=league_info['slug'], 
+                    stream=league_info['stream'],
+                    type=league_info['type']
+                )
+                db.add(league)
+                db.commit()
+                db.refresh(league)
             
         # Determine seasons and fetch data
         if league_info['stream'] == 'RAMP':
             # Fetch the page to find available seasons and game types
             soup = get_soup(league_info['url'])
-            if not soup: continue
+            if not soup: return
 
             # 1. Find Seasons
             ramp_seasons = []
@@ -697,12 +666,13 @@ def sync_data():
                 season_id = r_season['id']
                 
                 # Ensure season exists in DB
-                season = db.query(Season).filter_by(name=season_name).first()
-                if not season:
-                    season = Season(name=season_name)
-                    db.add(season)
-                    db.commit()
-                    db.refresh(season)
+                with db_lock:
+                    season = db.query(Season).filter_by(name=season_name).first()
+                    if not season:
+                        season = Season(name=season_name)
+                        db.add(season)
+                        db.commit()
+                        db.refresh(season)
                 
                 # Iterate Game Types
                 for gt in game_types:
@@ -716,64 +686,79 @@ def sync_data():
                         specific_league_slug = f"{league_info['slug']}-{gt['name'].lower()}"
                         specific_league_type = 'Seeding' if 'Seeding' in gt['name'] else 'Regular'
                         
-                        target_league = db.query(League).filter_by(
-                            slug=specific_league_slug,
-                            stream='RAMP',
-                            type=specific_league_type
-                        ).first()
-                        
-                        if not target_league:
-                            target_league = League(
-                                name=specific_league_name,
+                        with db_lock:
+                            target_league = db.query(League).filter_by(
                                 slug=specific_league_slug,
                                 stream='RAMP',
                                 type=specific_league_type
-                            )
-                            db.add(target_league)
-                            db.commit()
-                            db.refresh(target_league)
+                            ).first()
+                            
+                            if not target_league:
+                                target_league = League(
+                                    name=specific_league_name,
+                                    slug=specific_league_slug,
+                                    stream='RAMP',
+                                    type=specific_league_type
+                                )
+                                db.add(target_league)
+                                db.commit()
+                                db.refresh(target_league)
                     
                     data = fetch_ramp_data(league_info['url'], gt['id'], season_id)
-                    save_standings(db, data, season, target_league, community_map)
+                    with db_lock:
+                        save_standings(db, data, season, target_league, community_map)
 
         elif league_info['stream'] == 'TeamLinkt':
             current_season_name = "2025-2026"
-            season = db.query(Season).filter_by(name=current_season_name).first()
-            if not season:
-                season = Season(name=current_season_name)
-                db.add(season)
-                db.commit()
-                db.refresh(season)
+            with db_lock:
+                season = db.query(Season).filter_by(name=current_season_name).first()
+                if not season:
+                    season = Season(name=current_season_name)
+                    db.add(season)
+                    db.commit()
+                    db.refresh(season)
                 
             data = fetch_teamlinkt_data(league_info['url'], league_info['slug'])
-            save_standings(db, data, season, league, community_map)
+            with db_lock:
+                save_standings(db, data, season, league, community_map)
                 
         else:
             # Legacy/Standard
             seasons = get_seasons_for_league(league_info['url'])
             for season_info in seasons:
-                known_seasons.add(season_info['slug'])
+                # Note: known_seasons tracking is tricky in parallel. 
+                # We might need to return known seasons from this function or use a shared set.
+                # For now, let's just process.
                 
-                season = db.query(Season).filter_by(name=season_info['name']).first()
-                if not season:
-                    season = Season(name=season_info['name'])
-                    db.add(season)
-                    db.commit()
-                    db.refresh(season)
+                with db_lock:
+                    season = db.query(Season).filter_by(name=season_info['name']).first()
+                    if not season:
+                        season = Season(name=season_info['name'])
+                        db.add(season)
+                        db.commit()
+                        db.refresh(season)
                     
                 soup = get_soup(season_info['url'])
                 if soup:
                     data = parse_standings(soup)
-                    save_standings(db, data, season, league, community_map)
-
-    # Process tournaments (Legacy only for now)
-    print("Fetching tournaments...")
-    for season_slug in known_seasons:
-        print(f"Checking tournaments for {season_slug}...")
-        tournaments = get_tournaments(season_slug)
-        for t_info in tournaments:
-            print(f"  Processing {t_info['name']} ({t_info['type']})...")
+                    with db_lock:
+                        save_standings(db, data, season, league, community_map)
+                        
+            # Return known seasons for tournament processing
+            return [s['slug'] for s in seasons]
             
+    except Exception as e:
+        print(f"Error processing league {league_info['name']}: {e}")
+    finally:
+        db.close()
+    return []
+
+def process_tournament(t_info, season_slug, community_map):
+    db = SessionLocal()
+    try:
+        print(f"  Processing {t_info['name']} ({t_info['type']})...")
+        
+        with db_lock:
             league = db.query(League).filter_by(
                 slug=t_info['slug'], 
                 stream=t_info['stream'],
@@ -790,26 +775,96 @@ def sync_data():
                 db.add(league)
                 db.commit()
                 db.refresh(league)
-            
-            season_name = season_slug.replace('-', '/')
+        
+        season_name = season_slug.replace('-', '/')
+        with db_lock:
             season = db.query(Season).filter_by(name=season_name).first()
             if not season:
                 season = db.query(Season).filter_by(name=season_slug).first()
-                if not season:
-                    continue
+        
+        if not season:
+            return
 
-            soup = get_soup(t_info['url'])
-            if not soup:
-                continue
+        soup = get_soup(t_info['url'])
+        if not soup:
+            return
+        
+        data = parse_standings(soup)
+        if not data:
+            # print(f"    No standings table found, trying brackets parser...")
+            data = parse_brackets(soup)
             
-            data = parse_standings(soup)
-            if not data:
-                print(f"    No standings table found, trying brackets parser...")
-                data = parse_brackets(soup)
-                
+        with db_lock:
             save_standings(db, data, season, league, community_map)
+            
+    except Exception as e:
+        print(f"Error processing tournament {t_info['name']}: {e}")
+    finally:
+        db.close()
+
+def sync_data():
+    init_db()
     
-    db.close()
+    community_map = load_community_map()
+    
+    # 1. Fetch Legacy/Historical Leagues (from hockeycalgary.ca)
+    print("Fetching legacy/historical leagues...")
+    legacy_leagues = get_leagues() # Current season
+    
+    # Add historical seasons
+    historical_years = ["2023-2024", "2022-2023", "2021-2022", "2020-2021"]
+    for year in historical_years:
+        print(f"Fetching legacy leagues for {year}...")
+        legacy_leagues.extend(get_leagues(year))
+        
+    print(f"Found {len(legacy_leagues)} legacy leagues (total).")
+    
+    # 2. Fetch RAMP Leagues (U11)
+    print("Fetching RAMP leagues (U11)...")
+    ramp_leagues = get_ramp_leagues()
+    print(f"Found {len(ramp_leagues)} RAMP leagues.")
+    
+    # 3. Fetch TeamLinkt Leagues (U13+)
+    print("Fetching TeamLinkt leagues (U13+)...")
+    teamlinkt_leagues = get_teamlinkt_leagues()
+    print(f"Found {len(teamlinkt_leagues)} TeamLinkt leagues.")
+    
+    all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
+    
+    processed_leagues = set() # Track processed leagues to avoid duplicates
+    processed_lock = threading.Lock()
+    known_seasons = set()
+    
+    # Use ThreadPoolExecutor for parallel processing
+    # Adjust max_workers based on your system capabilities and network limits
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for league_info in all_leagues:
+            futures.append(
+                executor.submit(process_league, league_info, community_map, processed_leagues, processed_lock)
+            )
+            
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result:
+                known_seasons.update(result)
+
+    # Process tournaments (Legacy only for now)
+    print("Fetching tournaments...")
+    
+    # Parallelize tournaments too
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for season_slug in known_seasons:
+            print(f"Checking tournaments for {season_slug}...")
+            tournaments = get_tournaments(season_slug)
+            for t_info in tournaments:
+                futures.append(
+                    executor.submit(process_tournament, t_info, season_slug, community_map)
+                )
+        
+        concurrent.futures.wait(futures)
+    
     print("Sync complete.")
 
 if __name__ == "__main__":
