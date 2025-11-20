@@ -151,12 +151,29 @@ metric_map = {
 selected_metric_label = st.sidebar.selectbox("Select Metric", list(metric_map.keys()))
 selected_metric = metric_map[selected_metric_label]
 
+# --- Apply Filters ---
+# Create filtered dataframe based on all selected filters
+filtered_df = df[
+    (df['Season'].isin(selected_seasons)) &
+    (df['Type'].isin(selected_types)) &
+    (df['Age Category'].isin(selected_ages)) &
+    (df['Community'].isin(selected_communities))
+]
+
+# Apply optional league filter
+if selected_leagues:
+    filtered_df = filtered_df[filtered_df['League'].isin(selected_leagues)]
+
+# Apply optional team filter
+if selected_teams:
+    filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+
 # --- Data Completeness Check ---
 st.header("Data Completeness Check")
 with st.expander("View Data Completeness Matrix"):
-    if not df.empty:
+    if not filtered_df.empty:
         # Group by Season, Type, and Age Category to count records
-        completeness = df.groupby(['Season', 'Type', 'Age Category']).size().unstack(fill_value=0)
+        completeness = filtered_df.groupby(['Season', 'Type', 'Age Category']).size().unstack(fill_value=0)
         
         # Display as a heatmap-style dataframe
         if HAS_MATPLOTLIB:
@@ -177,7 +194,7 @@ st.subheader(f"📈 {selected_metric_label} Trends by Community")
 st.markdown("How has performance changed over the seasons?")
 
 # Aggregate by Season and Community
-trend_df = df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
+trend_df = filtered_df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
 
 fig_trend = px.line(
     trend_df, 
@@ -186,7 +203,7 @@ fig_trend = px.line(
     color='Community', 
     markers=True,
     title=f"Average {selected_metric_label} over Seasons",
-    category_orders={"Season": sorted(df['Season'].unique())}
+    category_orders={"Season": sorted(filtered_df['Season'].unique())}
 )
 st.plotly_chart(fig_trend, use_container_width=True)
 
@@ -194,7 +211,7 @@ st.plotly_chart(fig_trend, use_container_width=True)
 st.subheader("🏆 Strongest vs. Weakest (Systemic Gap)")
 st.markdown(f"Ranking communities by average **{selected_metric_label}** over the selected period.")
 
-ranking_df = df.groupby('Community')[selected_metric].mean().reset_index()
+ranking_df = filtered_df.groupby('Community')[selected_metric].mean().reset_index()
 ranking_df = ranking_df.sort_values(by=selected_metric, ascending=False)
 
 col1, col2 = st.columns([2, 1])
@@ -216,14 +233,14 @@ with col2:
 # 3. Detailed Stats View
 st.subheader("📋 Detailed Data")
 with st.expander("View Raw Data"):
-    st.dataframe(df)
+    st.dataframe(filtered_df)
 
 # 4. Head-to-Head Matrix (Heatmap)
 if len(selected_communities) > 1:
     st.subheader("🔥 Performance Heatmap")
     st.markdown("Compare performance intensity across seasons.")
     
-    heatmap_df = df.pivot_table(
+    heatmap_df = filtered_df.pivot_table(
         index='Community', 
         columns='Season', 
         values=selected_metric, 
