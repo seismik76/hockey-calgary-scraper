@@ -7,6 +7,12 @@ import sys
 from io import StringIO
 import time
 
+try:
+    import matplotlib
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+
 # Page Config
 st.set_page_config(page_title="Hockey Calgary Analytics", layout="wide")
 
@@ -134,33 +140,44 @@ available_teams = sorted(df[df['Community'].isin(selected_communities)]['Team'].
 selected_teams = st.sidebar.multiselect("Select Teams (Optional)", available_teams, default=[])
 
 # Metric Selector
-metric_options = ['Win %', 'Points %', 'Goal Diff/Game', 'PTS', 'W', 'L']
-selected_metric = st.sidebar.selectbox("Performance Metric", metric_options, index=1)
+metric_map = {
+    'Points': 'PTS',
+    'Wins': 'W',
+    'Losses': 'L',
+    'Goal Diff': 'Diff',
+    'Goals For': 'GF',
+    'Goals Against': 'GA'
+}
+selected_metric_label = st.sidebar.selectbox("Select Metric", list(metric_map.keys()))
+selected_metric = metric_map[selected_metric_label]
 
-# Apply Filters
-filtered_df = df[
-    (df['Season'].isin(selected_seasons)) &
-    (df['Type'].isin(selected_types)) & 
-    (df['Age Category'].isin(selected_ages)) &
-    (df['Community'].isin(selected_communities))
-]
-
-if selected_leagues:
-    filtered_df = filtered_df[filtered_df['League'].isin(selected_leagues)]
-
-if selected_teams:
-    filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+# --- Data Completeness Check ---
+st.header("Data Completeness Check")
+with st.expander("View Data Completeness Matrix"):
+    if not df.empty:
+        # Group by Season, Type, and Age Category to count records
+        completeness = df.groupby(['Season', 'Type', 'Age Category']).size().unstack(fill_value=0)
+        
+        # Display as a heatmap-style dataframe
+        if HAS_MATPLOTLIB:
+            st.dataframe(completeness.style.background_gradient(cmap="Greens", axis=None))
+        else:
+            st.dataframe(completeness)
+        
+        st.caption("Numbers represent the count of team records found for each Season/Type/Age Group combination.")
+    else:
+        st.warning("No data available to check.")
 
 # --- Main Content ---
 
-st.title("Community Performance Analysis")
+st.header(f"{selected_metric_label} Analysis")
 
 # 1. Trend Over Time
-st.subheader(f"📈 {selected_metric} Trends by Community")
+st.subheader(f"📈 {selected_metric_label} Trends by Community")
 st.markdown("How has performance changed over the seasons?")
 
 # Aggregate by Season and Community
-trend_df = filtered_df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
+trend_df = df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
 
 fig_trend = px.line(
     trend_df, 
@@ -168,16 +185,16 @@ fig_trend = px.line(
     y=selected_metric, 
     color='Community', 
     markers=True,
-    title=f"Average {selected_metric} over Seasons",
+    title=f"Average {selected_metric_label} over Seasons",
     category_orders={"Season": sorted(df['Season'].unique())}
 )
 st.plotly_chart(fig_trend, use_container_width=True)
 
 # 2. Systemic Gap Analysis (Overall Ranking)
 st.subheader("🏆 Strongest vs. Weakest (Systemic Gap)")
-st.markdown(f"Ranking communities by average **{selected_metric}** over the selected period.")
+st.markdown(f"Ranking communities by average **{selected_metric_label}** over the selected period.")
 
-ranking_df = filtered_df.groupby('Community')[selected_metric].mean().reset_index()
+ranking_df = df.groupby('Community')[selected_metric].mean().reset_index()
 ranking_df = ranking_df.sort_values(by=selected_metric, ascending=False)
 
 col1, col2 = st.columns([2, 1])
@@ -189,7 +206,7 @@ with col1:
         y=selected_metric, 
         color=selected_metric,
         color_continuous_scale='RdYlGn',
-        title=f"Overall Average {selected_metric}"
+        title=f"Overall Average {selected_metric_label}"
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -199,14 +216,14 @@ with col2:
 # 3. Detailed Stats View
 st.subheader("📋 Detailed Data")
 with st.expander("View Raw Data"):
-    st.dataframe(filtered_df)
+    st.dataframe(df)
 
 # 4. Head-to-Head Matrix (Heatmap)
 if len(selected_communities) > 1:
     st.subheader("🔥 Performance Heatmap")
     st.markdown("Compare performance intensity across seasons.")
     
-    heatmap_df = filtered_df.pivot_table(
+    heatmap_df = df.pivot_table(
         index='Community', 
         columns='Season', 
         values=selected_metric, 
@@ -217,6 +234,6 @@ if len(selected_communities) > 1:
         heatmap_df,
         text_auto=".2f",
         color_continuous_scale='RdYlGn',
-        title=f"{selected_metric} Heatmap"
+        title=f"{selected_metric_label} Heatmap"
     )
     st.plotly_chart(fig_heat, use_container_width=True)

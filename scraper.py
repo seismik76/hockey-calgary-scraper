@@ -23,8 +23,12 @@ def get_soup(url):
         print(f"Error fetching {url}: {e}")
         return None
 
-def get_leagues():
-    url = f"{BASE_URL}/standings"
+def get_leagues(year=None):
+    if year:
+        url = f"{BASE_URL}/standings/index/season/{year}"
+    else:
+        url = f"{BASE_URL}/standings"
+        
     soup = get_soup(url)
     if not soup:
         return []
@@ -270,22 +274,108 @@ def parse_standings(soup):
             
     return standings_data
 
-def fetch_ramp_data(league_url):
+def parse_brackets(soup):
+    standings_dict = defaultdict(lambda: {'gp': 0, 'w': 0, 'l': 0, 't': 0, 'pts': 0, 'gf': 0, 'ga': 0, 'diff': 0})
+    
+    game_boxes = soup.find_all('div', class_='game-box')
+    
+    for box in game_boxes:
+        try:
+            home_row = box.find('div', class_='home-row')
+            visitor_row = box.find('div', class_='visitor-row')
+            
+            if not home_row or not visitor_row:
+                continue
+                
+            home_team_elem = home_row.find('span', class_='team')
+            visitor_team_elem = visitor_row.find('span', class_='team')
+            
+            if not home_team_elem or not visitor_team_elem:
+                continue
+                
+            home_team = home_team_elem.get_text(strip=True)
+            visitor_team = visitor_team_elem.get_text(strip=True)
+            
+            # Skip placeholders like "Winner of Game #1" if they are not actual team names
+            if home_team_elem.find('a'):
+                home_team = home_team_elem.find('a').get_text(strip=True)
+            if visitor_team_elem.find('a'):
+                visitor_team = visitor_team_elem.find('a').get_text(strip=True)
+                
+            if "Winner of" in home_team or "Loser of" in home_team: continue
+            if "Winner of" in visitor_team or "Loser of" in visitor_team: continue
+            
+            home_score_span = home_row.find('span', class_='score')
+            visitor_score_span = visitor_row.find('span', class_='score')
+            
+            if not home_score_span or not visitor_score_span:
+                continue
+
+            home_score_text = home_score_span.get_text(strip=True)
+            visitor_score_text = visitor_score_span.get_text(strip=True)
+            
+            if not home_score_text.isdigit() or not visitor_score_text.isdigit():
+                continue
+                
+            h_score = int(home_score_text)
+            v_score = int(visitor_score_text)
+            
+            # Update Home Stats
+            standings_dict[home_team]['gp'] += 1
+            standings_dict[home_team]['gf'] += h_score
+            standings_dict[home_team]['ga'] += v_score
+            standings_dict[home_team]['diff'] += (h_score - v_score)
+            
+            # Update Visitor Stats
+            standings_dict[visitor_team]['gp'] += 1
+            standings_dict[visitor_team]['gf'] += v_score
+            standings_dict[visitor_team]['ga'] += h_score
+            standings_dict[visitor_team]['diff'] += (v_score - h_score)
+            
+            if h_score > v_score:
+                standings_dict[home_team]['w'] += 1
+                standings_dict[home_team]['pts'] += 2
+                standings_dict[visitor_team]['l'] += 1
+            elif v_score > h_score:
+                standings_dict[visitor_team]['w'] += 1
+                standings_dict[visitor_team]['pts'] += 2
+                standings_dict[home_team]['l'] += 1
+            else:
+                standings_dict[home_team]['t'] += 1
+                standings_dict[home_team]['pts'] += 1
+                standings_dict[visitor_team]['t'] += 1
+                standings_dict[visitor_team]['pts'] += 1
+                
+        except Exception as e:
+            continue
+            
+    # Convert to list
+    results = []
+    for team, stats in standings_dict.items():
+        stats['team'] = team
+        results.append(stats)
+        
+    return results
+
+def fetch_ramp_data(league_url, game_type_id=0, season_id=None):
     soup = get_soup(league_url)
     if not soup: return []
     
     # Extract SID
-    sid_select = soup.find('select', id='ddlSeason')
-    if not sid_select: return []
-    try:
-        sid = sid_select.find('option', selected=True)['value']
-    except TypeError:
-        # Fallback if no option is explicitly selected (use first)
-        options = sid_select.find_all('option')
-        if options:
-            sid = options[0]['value']
-        else:
-            return []
+    if season_id:
+        sid = season_id
+    else:
+        sid_select = soup.find('select', id='ddlSeason')
+        if not sid_select: return []
+        try:
+            sid = sid_select.find('option', selected=True)['value']
+        except TypeError:
+            # Fallback if no option is explicitly selected (use first)
+            options = sid_select.find_all('option')
+            if options:
+                sid = options[0]['value']
+            else:
+                return []
     
     # Extract DID from URL
     # URL: .../division/3300/30078/standings
@@ -313,7 +403,7 @@ def fetch_ramp_data(league_url):
         if match:
             assoc_id = match.group(1)
             
-    api_url = f"http://hockeycalgary.msa4.rampinteractive.com/api/leaguegame/getstandings3cached/{assoc_id}/{sid}/0/{cat_id}/{did}/0/0"
+    api_url = f"http://hockeycalgary.msa4.rampinteractive.com/api/leaguegame/getstandings3cached/{assoc_id}/{sid}/{game_type_id}/{cat_id}/{did}/0/0"
     
     try:
         resp = requests.get(api_url)
@@ -507,8 +597,15 @@ def sync_data():
     
     # 1. Fetch Legacy/Historical Leagues (from hockeycalgary.ca)
     print("Fetching legacy/historical leagues...")
-    legacy_leagues = get_leagues()
-    print(f"Found {len(legacy_leagues)} legacy leagues.")
+    legacy_leagues = get_leagues() # Current season
+    
+    # Add historical seasons
+    historical_years = ["2023-2024", "2022-2023", "2021-2022", "2020-2021"]
+    for year in historical_years:
+        print(f"Fetching legacy leagues for {year}...")
+        legacy_leagues.extend(get_leagues(year))
+        
+    print(f"Found {len(legacy_leagues)} legacy leagues (total).")
     
     # 2. Fetch RAMP Leagues (U11)
     print("Fetching RAMP leagues (U11)...")
@@ -523,8 +620,23 @@ def sync_data():
     all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
     
     known_seasons = set()
+    processed_leagues = set() # Track processed leagues to avoid duplicates
     
     for league_info in all_leagues:
+        # Create a unique key for the league to avoid re-processing identical leagues found in multiple places
+        league_key = f"{league_info['slug']}-{league_info['stream']}-{league_info['type']}"
+        
+        # Note: We don't skip if processed because we might be processing the same league for a DIFFERENT season context
+        # Actually, get_seasons_for_league fetches ALL seasons for that league URL.
+        # So if we process 'u11-hadp' once, we get all its seasons.
+        # However, the URL might be different if scraped from a historical page?
+        # Let's check: /standings/index/stream/community-council/league/u11-hadp is the same URL.
+        
+        if league_key in processed_leagues and league_info['stream'] not in ['RAMP', 'TeamLinkt']:
+             continue
+             
+        processed_leagues.add(league_key)
+        
         print(f"Processing {league_info['name']} ({league_info['stream']})...")
         
         # Get or create League
@@ -547,17 +659,83 @@ def sync_data():
             
         # Determine seasons and fetch data
         if league_info['stream'] == 'RAMP':
-            current_season_name = "2025-2026" 
-            season = db.query(Season).filter_by(name=current_season_name).first()
-            if not season:
-                season = Season(name=current_season_name)
-                db.add(season)
-                db.commit()
-                db.refresh(season)
+            # Fetch the page to find available seasons and game types
+            soup = get_soup(league_info['url'])
+            if not soup: continue
+
+            # 1. Find Seasons
+            ramp_seasons = []
+            season_select = soup.find('select', id='ddlSeason')
+            if season_select:
+                for opt in season_select.find_all('option'):
+                    val = opt.get('value')
+                    text = opt.get_text(strip=True)
+                    if val and val != '0':
+                        ramp_seasons.append({'name': text, 'id': val})
+            
+            # If no seasons found, default to current (hardcoded fallback)
+            if not ramp_seasons:
+                ramp_seasons.append({'name': "2025-2026", 'id': None})
+
+            # 2. Find Game Types
+            game_types = []
+            gt_select = soup.find('select', id='ddlGameType')
+            if gt_select:
+                for opt in gt_select.find_all('option'):
+                    val = opt.get('value')
+                    text = opt.get_text(strip=True)
+                    if val and val != '0': # Skip "All Game Types"
+                        game_types.append({'name': text, 'id': val})
+            
+            # If no game types, use default 0
+            if not game_types:
+                game_types.append({'name': 'Regular', 'id': 0})
+
+            # Iterate Seasons
+            for r_season in ramp_seasons:
+                season_name = r_season['name']
+                season_id = r_season['id']
                 
-            data = fetch_ramp_data(league_info['url'])
-            save_standings(db, data, season, league, community_map)
+                # Ensure season exists in DB
+                season = db.query(Season).filter_by(name=season_name).first()
+                if not season:
+                    season = Season(name=season_name)
+                    db.add(season)
+                    db.commit()
+                    db.refresh(season)
                 
+                # Iterate Game Types
+                for gt in game_types:
+                    print(f"  Fetching RAMP {season_name} - {gt['name']} (SID: {season_id}, GTID: {gt['id']})...")
+                    
+                    # Determine League (Create specific if needed)
+                    if gt['id'] == 0:
+                        target_league = league
+                    else:
+                        specific_league_name = f"{league_info['name']} - {gt['name']}"
+                        specific_league_slug = f"{league_info['slug']}-{gt['name'].lower()}"
+                        specific_league_type = 'Seeding' if 'Seeding' in gt['name'] else 'Regular'
+                        
+                        target_league = db.query(League).filter_by(
+                            slug=specific_league_slug,
+                            stream='RAMP',
+                            type=specific_league_type
+                        ).first()
+                        
+                        if not target_league:
+                            target_league = League(
+                                name=specific_league_name,
+                                slug=specific_league_slug,
+                                stream='RAMP',
+                                type=specific_league_type
+                            )
+                            db.add(target_league)
+                            db.commit()
+                            db.refresh(target_league)
+                    
+                    data = fetch_ramp_data(league_info['url'], gt['id'], season_id)
+                    save_standings(db, data, season, target_league, community_map)
+
         elif league_info['stream'] == 'TeamLinkt':
             current_season_name = "2025-2026"
             season = db.query(Season).filter_by(name=current_season_name).first()
@@ -625,6 +803,10 @@ def sync_data():
                 continue
             
             data = parse_standings(soup)
+            if not data:
+                print(f"    No standings table found, trying brackets parser...")
+                data = parse_brackets(soup)
+                
             save_standings(db, data, season, league, community_map)
     
     db.close()
