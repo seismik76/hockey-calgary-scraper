@@ -147,6 +147,10 @@ def get_teamlinkt_leagues():
             name = opt.get_text(strip=True)
             value = opt.get('value')
             if value and value != '0':
+                # Exclude U15 from TeamLinkt as it is sourced from Community Council
+                if 'U15' in name:
+                    continue
+                    
                 leagues.append({
                     'name': name,
                     'slug': value,
@@ -868,9 +872,17 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
 
                 seasons = get_seasons_for_league(url)
                 for season_info in seasons:
-                    # Skip 2025-2026 for legacy sources as it is sourced from TeamLinkt
+                    # Skip 2025-2026 for legacy sources IF it is U13 (sourced from TeamLinkt) or U11 (sourced from RAMP)
+                    # U15 should be processed here for 2025-2026
                     if season_info['name'] == '2025-2026':
-                        continue
+                        # Check if this league is U13 or U11
+                        # league_info['name'] or l_name might contain the category
+                        # Or check the slug
+                        is_u13 = 'u13' in league_info['slug'].lower() or 'u13' in league_info['name'].lower()
+                        is_u11 = 'u11' in league_info['slug'].lower() or 'u11' in league_info['name'].lower()
+                        
+                        if is_u13 or is_u11:
+                            continue
 
                     # Note: known_seasons tracking is tricky in parallel. 
                     # We might need to return known seasons from this function or use a shared set.
@@ -892,7 +904,7 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                         
             # Return known seasons for tournament processing (from the main url)
             # This is a bit loose but tournaments are usually linked to the main season slug
-            return [s['slug'] for s in get_seasons_for_league(league_info['url']) if s['name'] != '2025-2026']
+            return [s['slug'] for s in get_seasons_for_league(league_info['url'])]
             
     except Exception as e:
         print(f"Error processing league {league_info['name']}: {e}")
@@ -949,7 +961,25 @@ def process_tournament(t_info, season_slug, community_map):
     finally:
         db.close()
 
-def sync_data():
+def sync_data(reset=False):
+    if reset:
+        print("Resetting database... Deleting all existing data.")
+        db = SessionLocal()
+        try:
+            # Delete in order to respect foreign keys
+            db.query(Standing).delete()
+            db.query(Team).delete()
+            db.query(League).delete()
+            db.query(Season).delete()
+            db.query(Community).delete()
+            db.commit()
+            print("Database reset complete.")
+        except Exception as e:
+            print(f"Error resetting database: {e}")
+            db.rollback()
+        finally:
+            db.close()
+
     init_db()
     
     community_map = load_community_map()
@@ -979,26 +1009,28 @@ def sync_data():
     all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
     
     # CLEANUP: Remove legacy data for 2025-2026 to avoid duplicates with TeamLinkt
-    print("Cleaning up legacy data for 2025-2026...")
+    # Only remove U13 data, as U15 is still on legacy
+    print("Cleaning up legacy data for 2025-2026 (U13 only)...")
     db = SessionLocal()
     try:
         # Find 2025-2026 season
         s25 = db.query(Season).filter_by(name="2025-2026").first()
         if s25:
-            # Find standings for this season where league stream is community-council
+            # Find standings for this season where league stream is community-council AND league name contains U13
             # We need to join with League
             standings_to_delete = db.query(Standing).join(League).filter(
                 Standing.season_id == s25.id,
-                League.stream == 'community-council'
+                League.stream == 'community-council',
+                League.name.like('%U13%')
             ).all()
             
             if standings_to_delete:
-                print(f"  Deleting {len(standings_to_delete)} legacy records for 2025-2026...")
+                print(f"  Deleting {len(standings_to_delete)} legacy records for 2025-2026 (U13)...")
                 for st in standings_to_delete:
                     db.delete(st)
                 db.commit()
             else:
-                print("  No legacy records found for 2025-2026.")
+                print("  No legacy records found for 2025-2026 (U13).")
     except Exception as e:
         print(f"Error during cleanup: {e}")
     finally:
