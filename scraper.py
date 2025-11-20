@@ -724,28 +724,93 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                 
         else:
             # Legacy/Standard
-            seasons = get_seasons_for_league(league_info['url'])
-            for season_info in seasons:
-                # Note: known_seasons tracking is tricky in parallel. 
-                # We might need to return known seasons from this function or use a shared set.
-                # For now, let's just process.
+            
+            # 1. Discover all variations (Regular, Seeding, Playoff)
+            urls_to_process = {league_info['url']}
+            soup = get_soup(league_info['url'])
+            if soup:
+                for a in soup.find_all('a', href=True):
+                    href = a['href']
+                    # Look for sibling links (same league, different type)
+                    if '/league/' in href and league_info['slug'] in href:
+                        if '/type/' in href:
+                             urls_to_process.add(f"{BASE_URL}{href}")
+
+            # 2. Process each variation
+            for url in urls_to_process:
+                # Determine type from URL
+                current_type = 'Regular'
+                if '/type/seeding' in url:
+                    current_type = 'Seeding'
+                elif '/type/playoff' in url:
+                    current_type = 'Playoff'
+                elif '/type/tournament' in url:
+                    current_type = 'Tournament'
+                
+                # Create/Get League for this specific type
+                # Note: The original league_info might be for Regular, but here we might be processing Seeding
+                
+                # We need a unique slug for the DB if we want to separate them?
+                # The League model has (slug, stream, type) as unique constraint effectively?
+                # Let's check models.py or the DB schema.
+                # The code uses:
+                # league = db.query(League).filter_by(slug=..., stream=..., type=...).first()
+                # So yes, we can have same slug, same stream, different type.
                 
                 with db_lock:
-                    season = db.query(Season).filter_by(name=season_info['name']).first()
-                    if not season:
-                        season = Season(name=season_info['name'])
-                        db.add(season)
-                        db.commit()
-                        db.refresh(season)
+                    league = db.query(League).filter_by(
+                        slug=league_info['slug'], 
+                        stream=league_info['stream'],
+                        type=current_type
+                    ).first()
                     
-                soup = get_soup(season_info['url'])
-                if soup:
-                    data = parse_standings(soup)
-                    with db_lock:
-                        save_standings(db, data, season, league, community_map)
+                    if not league:
+                        # Append type to name if not Regular to make it clear?
+                        # Or just keep name same and rely on type column?
+                        # The UI groups by League Name. If they have same name but different type, 
+                        # they will be grouped together in dropdowns unless we filter by type.
+                        # Let's keep name consistent or append type?
+                        # Existing code for RAMP appended type: f"{league_info['name']} - {gt['name']}"
+                        # Let's append type for clarity if not Regular.
                         
-            # Return known seasons for tournament processing
-            return [s['slug'] for s in seasons]
+                        l_name = league_info['name']
+                        # If the name already has "Seeding" in it, don't add it again.
+                        if current_type != 'Regular' and current_type not in l_name:
+                             l_name = f"{l_name} - {current_type}"
+                             
+                        league = League(
+                            name=l_name, 
+                            slug=league_info['slug'], 
+                            stream=league_info['stream'],
+                            type=current_type
+                        )
+                        db.add(league)
+                        db.commit()
+                        db.refresh(league)
+
+                seasons = get_seasons_for_league(url)
+                for season_info in seasons:
+                    # Note: known_seasons tracking is tricky in parallel. 
+                    # We might need to return known seasons from this function or use a shared set.
+                    # For now, let's just process.
+                    
+                    with db_lock:
+                        season = db.query(Season).filter_by(name=season_info['name']).first()
+                        if not season:
+                            season = Season(name=season_info['name'])
+                            db.add(season)
+                            db.commit()
+                            db.refresh(season)
+                        
+                    soup = get_soup(season_info['url'])
+                    if soup:
+                        data = parse_standings(soup)
+                        with db_lock:
+                            save_standings(db, data, season, league, community_map)
+                        
+            # Return known seasons for tournament processing (from the main url)
+            # This is a bit loose but tournaments are usually linked to the main season slug
+            return [s['slug'] for s in get_seasons_for_league(league_info['url'])]
             
     except Exception as e:
         print(f"Error processing league {league_info['name']}: {e}")
