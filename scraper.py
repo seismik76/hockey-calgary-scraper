@@ -439,22 +439,27 @@ def parse_ramp_json(data):
             continue
     return standings
 
-def fetch_teamlinkt_data(league_url, hierarchy_value):
+def fetch_teamlinkt_data(league_url, hierarchy_value, season_id=None):
     # league_url is the main standings page
-    soup = get_soup(league_url) # Use verify=False
-    if not soup: return []
-    
-    # Extract Season ID
-    sid_select = soup.find('select', id='season_id')
-    if not sid_select: return []
-    try:
-        season_id = sid_select.find('option', selected=True)['value']
-    except TypeError:
-        options = sid_select.find_all('option')
-        if options:
-            season_id = options[0]['value']
-        else:
-            return []
+    if not season_id:
+        soup = get_soup(league_url) # Use verify=False
+        if not soup: return []
+        
+        # Extract Season ID
+        sid_select = soup.find('select', id='season_id')
+        if not sid_select: return []
+        try:
+            season_id = sid_select.find('option', selected=True)['value']
+        except TypeError:
+            options = sid_select.find_all('option')
+            if options:
+                season_id = options[0]['value']
+            else:
+                return []
+    else:
+        # We still need soup to get assoc_id
+        soup = get_soup(league_url)
+        if not soup: return []
     
     # Extract Association ID from URL or script
     script_content = ""
@@ -709,18 +714,91 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                         save_standings(db, data, season, target_league, community_map)
 
         elif league_info['stream'] == 'TeamLinkt':
-            current_season_name = "2025-2026"
-            with db_lock:
-                season = db.query(Season).filter_by(name=current_season_name).first()
-                if not season:
-                    season = Season(name=current_season_name)
-                    db.add(season)
-                    db.commit()
-                    db.refresh(season)
+            # Fetch the page to find available seasons (e.g. Seeding vs Regular)
+            soup = get_soup(league_info['url'])
+            if not soup: return []
+            
+            tl_seasons = []
+            sid_select = soup.find('select', id='season_id')
+            if sid_select:
+                for opt in sid_select.find_all('option'):
+                    val = opt.get('value')
+                    text = opt.get_text(strip=True)
+                    if val:
+                        tl_seasons.append({'name': text, 'id': val})
+            
+            # If no seasons found, try default logic (though unlikely if page loaded)
+            if not tl_seasons:
+                # Fallback to just one pass with default
+                tl_seasons.append({'name': "2025-2026", 'id': None})
+
+            for tl_season in tl_seasons:
+                # Parse season name and type from text like "2025/2026 U13 SEEDING"
+                # We want to map this to our standard Season "2025-2026" and League Type
                 
-            data = fetch_teamlinkt_data(league_info['url'], league_info['slug'])
-            with db_lock:
-                save_standings(db, data, season, league, community_map)
+                s_text = tl_season['name']
+                season_name = "2025-2026" # Default
+                
+                # Try to extract year
+                year_match = re.search(r"(\d{4})[-/](\d{4})", s_text)
+                if year_match:
+                    season_name = f"{year_match.group(1)}-{year_match.group(2)}"
+                
+                # Determine Type
+                l_type = 'Regular'
+                if 'SEEDING' in s_text.upper():
+                    l_type = 'Seeding'
+                elif 'PLAYOFF' in s_text.upper():
+                    l_type = 'Playoff'
+                elif 'TOURNAMENT' in s_text.upper():
+                    l_type = 'Tournament'
+                
+                # Ensure Season exists
+                with db_lock:
+                    season = db.query(Season).filter_by(name=season_name).first()
+                    if not season:
+                        season = Season(name=season_name)
+                        db.add(season)
+                        db.commit()
+                        db.refresh(season)
+                
+                # Determine League (Specific to Type)
+                # If type is Regular, use the base league.
+                # If type is Seeding, we might need a separate league entry or just use the type column?
+                # The current schema uses (slug, stream, type) as unique.
+                # So we should create/get the league with the correct type.
+                
+                # Construct a name that might include the type if not Regular, 
+                # similar to how we did for Legacy/RAMP to distinguish in UI if needed.
+                # But for TeamLinkt, the league_info['name'] is like "U13 / U13 TIER 3 SOUTH"
+                # If we have Seeding, we probably want "U13 / U13 TIER 3 SOUTH - Seeding"
+                
+                target_league_name = league_info['name']
+                if l_type != 'Regular':
+                    target_league_name = f"{league_info['name']} - {l_type}"
+                
+                with db_lock:
+                    league = db.query(League).filter_by(
+                        slug=league_info['slug'], 
+                        stream='TeamLinkt',
+                        type=l_type
+                    ).first()
+                    
+                    if not league:
+                        league = League(
+                            name=target_league_name,
+                            slug=league_info['slug'],
+                            stream='TeamLinkt',
+                            type=l_type
+                        )
+                        db.add(league)
+                        db.commit()
+                        db.refresh(league)
+                
+                print(f"  Fetching TeamLinkt {season_name} - {l_type} (SID: {tl_season['id']})...")
+                data = fetch_teamlinkt_data(league_info['url'], league_info['slug'], season_id=tl_season['id'])
+                with db_lock:
+                    save_standings(db, data, season, league, community_map)
                 
         else:
             # Legacy/Standard
@@ -790,6 +868,10 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
 
                 seasons = get_seasons_for_league(url)
                 for season_info in seasons:
+                    # Skip 2025-2026 for legacy sources as it is sourced from TeamLinkt
+                    if season_info['name'] == '2025-2026':
+                        continue
+
                     # Note: known_seasons tracking is tricky in parallel. 
                     # We might need to return known seasons from this function or use a shared set.
                     # For now, let's just process.
@@ -810,7 +892,7 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                         
             # Return known seasons for tournament processing (from the main url)
             # This is a bit loose but tournaments are usually linked to the main season slug
-            return [s['slug'] for s in get_seasons_for_league(league_info['url'])]
+            return [s['slug'] for s in get_seasons_for_league(league_info['url']) if s['name'] != '2025-2026']
             
     except Exception as e:
         print(f"Error processing league {league_info['name']}: {e}")
@@ -895,6 +977,32 @@ def sync_data():
     print(f"Found {len(teamlinkt_leagues)} TeamLinkt leagues.")
     
     all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
+    
+    # CLEANUP: Remove legacy data for 2025-2026 to avoid duplicates with TeamLinkt
+    print("Cleaning up legacy data for 2025-2026...")
+    db = SessionLocal()
+    try:
+        # Find 2025-2026 season
+        s25 = db.query(Season).filter_by(name="2025-2026").first()
+        if s25:
+            # Find standings for this season where league stream is community-council
+            # We need to join with League
+            standings_to_delete = db.query(Standing).join(League).filter(
+                Standing.season_id == s25.id,
+                League.stream == 'community-council'
+            ).all()
+            
+            if standings_to_delete:
+                print(f"  Deleting {len(standings_to_delete)} legacy records for 2025-2026...")
+                for st in standings_to_delete:
+                    db.delete(st)
+                db.commit()
+            else:
+                print("  No legacy records found for 2025-2026.")
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
+    finally:
+        db.close()
     
     processed_leagues = set() # Track processed leagues to avoid duplicates
     processed_lock = threading.Lock()
