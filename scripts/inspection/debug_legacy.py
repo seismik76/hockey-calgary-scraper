@@ -1,5 +1,9 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 from scraper import get_leagues, get_soup, parse_standings, get_seasons_for_league
-from utils import normalize_community_name, load_community_map
+from utilities.utils import normalize_community_name, load_community_map
 
 def debug_legacy_scraping():
     year = "2023-2024"

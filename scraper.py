@@ -4,7 +4,7 @@ import time
 from sqlalchemy.orm import Session
 from database import init_db, SessionLocal
 from models import Season, League, Team, Community, Standing
-from utils import normalize_community_name, load_community_map, save_community_map
+from utilities.utils import normalize_community_name, load_community_map, save_community_map
 import urllib3
 from collections import defaultdict
 import re
@@ -809,9 +809,9 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
             
             # 1. Discover all variations (Regular, Seeding, Playoff)
             urls_to_process = {league_info['url']}
-            soup = get_soup(league_info['url'])
-            if soup:
-                for a in soup.find_all('a', href=True):
+            base_soup = get_soup(league_info['url'])
+            if base_soup:
+                for a in base_soup.find_all('a', href=True):
                     href = a['href']
                     # Look for sibling links (same league, different type)
                     if '/league/' in href and league_info['slug'] in href:
@@ -828,6 +828,23 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                     current_type = 'Playoff'
                 elif '/type/tournament' in url:
                     current_type = 'Tournament'
+                
+                # Check if "Regular" URL is actually showing Seeding data
+                skip_current_season_as_regular = False
+                if current_type == 'Regular':
+                    # Use base_soup if available and matching URL, otherwise fetch
+                    if url == league_info['url'] and base_soup:
+                        check_soup = base_soup
+                    else:
+                        check_soup = get_soup(url)
+                        
+                    if check_soup:
+                        # Check if there is an ACTIVE link to seeding
+                        # This implies the page is defaulting to Seeding view
+                        active_seeding = check_soup.find('a', href=lambda h: h and '/type/seeding' in h, class_='active')
+                        if active_seeding:
+                            print(f"  Note: {url} defaults to 'Seeding' view. Will skip current season data for Regular.")
+                            skip_current_season_as_regular = True
                 
                 # Create/Get League for this specific type
                 # Note: The original league_info might be for Regular, but here we might be processing Seeding
@@ -875,6 +892,10 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                     # Skip 2025-2026 for legacy sources IF it is U13 (sourced from TeamLinkt) or U11 (sourced from RAMP)
                     # U15 should be processed here for 2025-2026
                     if season_info['name'] == '2025-2026':
+                        # If we flagged to skip current season as regular, skip it
+                        if skip_current_season_as_regular:
+                            continue
+
                         # Check if this league is U13 or U11
                         # league_info['name'] or l_name might contain the category
                         # Or check the slug
@@ -895,10 +916,33 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                             db.add(season)
                             db.commit()
                             db.refresh(season)
+                    
+                    # Construct target URL based on type
+                    target_url = season_info['url']
+                    
+                    # Remove existing type if present to avoid duplication or conflict
+                    target_url = re.sub(r'/type/[^/]+', '', target_url)
+                    
+                    if current_type == 'Regular':
+                        target_url = f"{target_url}/type/league"
+                    elif current_type == 'Seeding':
+                        target_url = f"{target_url}/type/seeding"
+                    elif current_type == 'Playoff':
+                        target_url = f"{target_url}/type/playoff"
+                    elif current_type == 'Tournament':
+                        target_url = f"{target_url}/type/tournament"
                         
-                    soup = get_soup(season_info['url'])
+                    soup = get_soup(target_url)
                     if soup:
                         data = parse_standings(soup)
+                        # Fallback to original URL if no data found and type is Regular
+                        # (Some older seasons might not use /type/league)
+                        if not data and current_type == 'Regular':
+                             # print(f"  No data at {target_url}, trying fallback to {season_info['url']}")
+                             soup_fallback = get_soup(season_info['url'])
+                             if soup_fallback:
+                                 data = parse_standings(soup_fallback)
+                        
                         with db_lock:
                             save_standings(db, data, season, league, community_map)
                         

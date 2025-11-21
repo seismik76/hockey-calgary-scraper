@@ -1,7 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models import Community, Team, Standing, Base
-from utils import ALLOWED_COMMUNITIES
+from utilities.utils import ALLOWED_COMMUNITIES
 
 # Database setup
 DB_NAME = "hockey_calgary.db"

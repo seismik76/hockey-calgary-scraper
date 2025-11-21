@@ -67,6 +67,9 @@ def load_data():
             
         df['Age Category'] = df['League'].apply(get_age_category)
         
+        # Exclude Girls Hockey Calgary
+        df = df[df['Community'] != 'Girls Hockey Calgary']
+        
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -85,7 +88,7 @@ if st.sidebar.button("Run Scraper (Sync Data)"):
         sys.stdout = mystdout = StringIO()
         
         try:
-            sync_data()
+            sync_data(reset=True)
             st.success("Sync Complete!")
         except Exception as e:
             st.error(f"An error occurred: {e}")
@@ -106,6 +109,16 @@ if df.empty:
     st.warning("No data found. Please run the scraper first.")
     st.stop()
 
+# Export
+st.sidebar.header("Export Data")
+csv = df.to_csv(index=False).encode('utf-8')
+st.sidebar.download_button(
+    label="Download All Data (CSV)",
+    data=csv,
+    file_name='hockey_calgary_all_data.csv',
+    mime='text/csv',
+)
+
 # Filters
 st.sidebar.header("Filters")
 
@@ -124,7 +137,21 @@ selected_ages = st.sidebar.multiselect("Age Category", age_categories, default=d
 
 # Community Filter
 all_communities = sorted(df['Community'].unique().tolist())
-selected_communities = st.sidebar.multiselect("Select Communities", all_communities, default=all_communities)
+
+# Division Selector
+division = st.sidebar.radio("Hockey Calgary Division", ["All", "North", "South"], index=0)
+
+north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
+south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
+
+if division == "North":
+    community_options = [c for c in all_communities if c in north_communities]
+elif division == "South":
+    community_options = [c for c in all_communities if c in south_communities]
+else:
+    community_options = all_communities
+
+selected_communities = st.sidebar.multiselect("Select Communities", community_options, default=community_options)
 
 # League Filter
 available_leagues = sorted(df[
@@ -150,6 +177,41 @@ metric_map = {
 }
 selected_metric_label = st.sidebar.selectbox("Select Metric", list(metric_map.keys()))
 selected_metric = metric_map[selected_metric_label]
+
+# --- Apply Filters ---
+filtered_df = df.copy()
+
+if selected_seasons:
+    filtered_df = filtered_df[filtered_df['Season'].isin(selected_seasons)]
+
+if selected_types:
+    filtered_df = filtered_df[filtered_df['Type'].isin(selected_types)]
+
+if selected_ages:
+    filtered_df = filtered_df[filtered_df['Age Category'].isin(selected_ages)]
+
+if selected_communities:
+    filtered_df = filtered_df[filtered_df['Community'].isin(selected_communities)]
+
+if selected_leagues:
+    filtered_df = filtered_df[filtered_df['League'].isin(selected_leagues)]
+
+if selected_teams:
+    filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+
+# Export Filtered Data
+st.sidebar.markdown("---")
+csv_filtered = filtered_df.to_csv(index=False).encode('utf-8')
+st.sidebar.download_button(
+    label="Download Filtered Data (CSV)",
+    data=csv_filtered,
+    file_name='hockey_calgary_filtered_data.csv',
+    mime='text/csv',
+)
+
+if filtered_df.empty:
+    st.warning("No data matches the selected filters.")
+    st.stop()
 
 # --- Data Completeness Check ---
 st.header("Data Completeness Check")
@@ -177,7 +239,7 @@ st.subheader(f"📈 {selected_metric_label} Trends by Community")
 st.markdown("How has performance changed over the seasons?")
 
 # Aggregate by Season and Community
-trend_df = df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
+trend_df = filtered_df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
 
 fig_trend = px.line(
     trend_df, 
@@ -186,7 +248,7 @@ fig_trend = px.line(
     color='Community', 
     markers=True,
     title=f"Average {selected_metric_label} over Seasons",
-    category_orders={"Season": sorted(df['Season'].unique())}
+    category_orders={"Season": sorted(filtered_df['Season'].unique())}
 )
 st.plotly_chart(fig_trend, use_container_width=True)
 
@@ -194,7 +256,7 @@ st.plotly_chart(fig_trend, use_container_width=True)
 st.subheader("🏆 Strongest vs. Weakest (Systemic Gap)")
 st.markdown(f"Ranking communities by average **{selected_metric_label}** over the selected period.")
 
-ranking_df = df.groupby('Community')[selected_metric].mean().reset_index()
+ranking_df = filtered_df.groupby('Community')[selected_metric].mean().reset_index()
 ranking_df = ranking_df.sort_values(by=selected_metric, ascending=False)
 
 col1, col2 = st.columns([2, 1])
@@ -216,14 +278,14 @@ with col2:
 # 3. Detailed Stats View
 st.subheader("📋 Detailed Data")
 with st.expander("View Raw Data"):
-    st.dataframe(df)
+    st.dataframe(filtered_df)
 
 # 4. Head-to-Head Matrix (Heatmap)
 if len(selected_communities) > 1:
     st.subheader("🔥 Performance Heatmap")
     st.markdown("Compare performance intensity across seasons.")
     
-    heatmap_df = df.pivot_table(
+    heatmap_df = filtered_df.pivot_table(
         index='Community', 
         columns='Season', 
         values=selected_metric, 

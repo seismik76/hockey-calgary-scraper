@@ -1,7 +1,11 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import Team, Community
-from utils import normalize_community_name, load_community_map
+from utilities.utils import normalize_community_name, load_community_map
 
 def fix_communities():
     db = SessionLocal()
