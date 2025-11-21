@@ -1,26 +1,26 @@
 # Hockey Calgary Scraper
 
-This project scrapes historical performance data for U9, U11, U13, and U15 teams from [hockeycalgary.ca](https://www.hockeycalgary.ca).
+This project scrapes historical performance data for U9, U11, U13, and U15 teams from [hockeycalgary.ca](https://www.hockeycalgary.ca), including support for RAMP (U11) and TeamLinkt (U13+) data sources.
 
 ## Features
 
-- Scrapes standings (GP, W, L, T, PTS, GF, GA, Diff) for multiple seasons.
-- Stores data in a SQLite database (`hockey_calgary.db`).
-- Maps team names to communities (e.g., "Bow Valley 1" -> "Bow Valley").
-- Supports custom community mapping via `community_map.json`.
-- Exports data to CSV for viewing and editing.
-- **Web Dashboard**: Interactive analytics dashboard to visualize trends and compare communities.
+- **Comprehensive Scraping**: Collects standings (GP, W, L, T, PTS, GF, GA, Diff) across multiple seasons.
+- **Historical Data**: Robust handling of legacy seasons and different league types (Regular, Seeding, Playoff).
+- **Data Storage**: Stores structured data in a SQLite database (`hockey_calgary.db`).
+- **Community Mapping**: Automatically maps team names to communities (e.g., "Bow Valley 1" -> "Bow Valley") with custom overrides via `community_map.json`.
+- **Web Dashboard**: Interactive Streamlit dashboard to visualize trends, compare communities, and filter data.
+- **Data Export**: Download full or filtered datasets directly to CSV from the dashboard.
 
 ## Setup
 
 1.  **Install Dependencies**:
     The project uses Python. Ensure you have the required packages installed:
     ```bash
-    pip install requests beautifulsoup4 pandas sqlalchemy streamlit plotly
+    pip install -r requirements.txt
     ```
 
 2.  **Database**:
-    The database is automatically created when you run the scraper.
+    The database is automatically created and initialized when you run the scraper.
 
 ## Usage
 
@@ -33,10 +33,11 @@ streamlit run app.py
 ```
 
 This will open a web page in your browser where you can:
-- **Run the Scraper**: Click the "Run Scraper" button in the sidebar to fetch the latest data.
+- **Run the Scraper**: Click the "Run Scraper" button in the sidebar to sync the latest data.
 - **Analyze Trends**: View performance trends over time for different communities.
 - **Compare Communities**: See head-to-head comparisons and rankings.
-- **Filter Data**: Filter by season, age category (U11, U13, etc.), and community.
+- **Filter Data**: Filter by season, age category (U11, U13, etc.), community, and league type.
+- **Export Data**: Download the complete dataset or your filtered view as a CSV file.
 
 ### 2. Sync Data (Command Line)
 
@@ -48,18 +49,25 @@ python scraper.py
 
 This will:
 - Fetch all leagues for U9, U11, U13, U15.
-- Iterate through available seasons.
+- Handle data from Hockey Calgary (Legacy), RAMP, and TeamLinkt.
 - Update the database with the latest stats.
 
-### 3. View/Export Data
+### 3. Maintenance & Inspection
 
-To export the data to a CSV file (`hockey_calgary_stats.csv`):
+The project includes various scripts for debugging and maintenance, organized in the `scripts/` directory.
 
-```bash
-python export_data.py
-```
-
-You can then open this CSV file in Excel or any spreadsheet viewer.
+- **Export Data (CLI)**:
+  ```bash
+  python scripts/maintenance/export_data.py
+  ```
+- **Debug Legacy Scraping**:
+  ```bash
+  python scripts/inspection/debug_legacy.py
+  ```
+- **Clean/Fix Community Names**:
+  ```bash
+  python scripts/maintenance/fix_communities.py
+  ```
 
 ### 4. Community Mapping
 
@@ -74,7 +82,7 @@ Format:
 }
 ```
 
-After editing the map, run `python scraper.py` again to update the community names in the database.
+After editing the map, run `python scraper.py` (or use the "Run Scraper" button in the app) to update the database.
 
 ## Project Structure
 
@@ -82,7 +90,13 @@ After editing the map, run `python scraper.py` again to update the community nam
 - `scraper.py`: Main scraping script.
 - `models.py`: Database models (SQLAlchemy).
 - `database.py`: Database connection setup.
-- `utils.py`: Helper functions for community name normalization.
-- `export_data.py`: Script to export DB to CSV.
+- `utilities/`: Shared utility functions (e.g., community name normalization).
+- `scripts/`:
+  - `inspection/`: Scripts for debugging and inspecting source HTML/API responses.
+  - `maintenance/`: Scripts for database cleanup and data fixes.
+  - `testing/`: Unit tests and verification scripts.
+  - `legacy/`: Older scraping scripts.
+- `data/`:
+  - `dumps/`: Raw data exports and debug dumps.
 - `community_map.json`: Custom mappings for community names.
-- `hockey_calgary.db`: SQLite database file (created after running scraper).
+- `hockey_calgary.db`: SQLite database file.
