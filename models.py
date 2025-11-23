@@ -53,6 +53,7 @@ class Standing(Base):
     gf = Column(Integer)
     ga = Column(Integer)
     diff = Column(Integer)
+    source_url = Column(String)
     
     season = relationship("Season")
     league = relationship("League")

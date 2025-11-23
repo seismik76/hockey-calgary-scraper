@@ -2,8 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import time
 from sqlalchemy.orm import Session
-from database import init_db, SessionLocal
-from models import Season, League, Team, Community, Standing
+from database import init_db, SessionLocal, engine
+from models import Season, League, Team, Community, Standing, Base
 from utilities.utils import normalize_community_name, load_community_map, save_community_map
 import urllib3
 from collections import defaultdict
@@ -367,14 +367,14 @@ def parse_brackets(soup):
 
 def fetch_ramp_data(league_url, game_type_id=0, season_id=None):
     soup = get_soup(league_url)
-    if not soup: return []
+    if not soup: return [], None
     
     # Extract SID
     if season_id:
         sid = season_id
     else:
         sid_select = soup.find('select', id='ddlSeason')
-        if not sid_select: return []
+        if not sid_select: return [], None
         try:
             sid = sid_select.find('option', selected=True)['value']
         except TypeError:
@@ -383,7 +383,7 @@ def fetch_ramp_data(league_url, game_type_id=0, season_id=None):
             if options:
                 sid = options[0]['value']
             else:
-                return []
+                return [], None
     
     # Extract DID from URL
     # URL: .../division/3300/30078/standings
@@ -394,9 +394,9 @@ def fetch_ramp_data(league_url, game_type_id=0, season_id=None):
             did = parts[did_idx]
             cat_id = parts[did_idx-1] # 3300
         else:
-            return []
+            return [], None
     except:
-        return []
+        return [], None
         
     # Search for "getstandings3cached" in scripts to find the base URL pattern
     script_content = ""
@@ -416,10 +416,10 @@ def fetch_ramp_data(league_url, game_type_id=0, season_id=None):
     try:
         resp = requests.get(api_url)
         data = resp.json()
-        return parse_ramp_json(data)
+        return parse_ramp_json(data), api_url
     except Exception as e:
         print(f"Error fetching RAMP API: {e}")
-        return []
+        return [], api_url
 
 def parse_ramp_json(data):
     standings = []
@@ -447,11 +447,11 @@ def fetch_teamlinkt_data(league_url, hierarchy_value, season_id=None):
     # league_url is the main standings page
     if not season_id:
         soup = get_soup(league_url) # Use verify=False
-        if not soup: return []
+        if not soup: return [], None
         
         # Extract Season ID
         sid_select = soup.find('select', id='season_id')
-        if not sid_select: return []
+        if not sid_select: return [], None
         try:
             season_id = sid_select.find('option', selected=True)['value']
         except TypeError:
@@ -459,11 +459,11 @@ def fetch_teamlinkt_data(league_url, hierarchy_value, season_id=None):
             if options:
                 season_id = options[0]['value']
             else:
-                return []
+                return [], None
     else:
         # We still need soup to get assoc_id
         soup = get_soup(league_url)
-        if not soup: return []
+        if not soup: return [], None
     
     # Extract Association ID from URL or script
     script_content = ""
@@ -511,10 +511,10 @@ def fetch_teamlinkt_data(league_url, hierarchy_value, season_id=None):
             # print("DEBUG: Data is string, parsing...")
             data = json.loads(data)
             
-        return parse_teamlinkt_json(data)
+        return parse_teamlinkt_json(data), api_url
     except Exception as e:
         print(f"Error fetching TeamLinkt API: {e}")
-        return []
+        return [], api_url
 
 def parse_teamlinkt_json(data):
     standings = []
@@ -546,7 +546,7 @@ def parse_teamlinkt_json(data):
             continue
     return standings
 
-def save_standings(db, data, season, league, community_map):
+def save_standings(db, data, season, league, community_map, source_url=None):
     if not data:
         return
         
@@ -599,6 +599,8 @@ def save_standings(db, data, season, league, community_map):
         standing.gf = entry['gf']
         standing.ga = entry['ga']
         standing.diff = entry['diff']
+        if source_url:
+            standing.source_url = source_url
         
         db.commit()
 
@@ -713,9 +715,9 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                                 db.commit()
                                 db.refresh(target_league)
                     
-                    data = fetch_ramp_data(league_info['url'], gt['id'], season_id)
+                    data, source_url = fetch_ramp_data(league_info['url'], gt['id'], season_id)
                     with db_lock:
-                        save_standings(db, data, season, target_league, community_map)
+                        save_standings(db, data, season, target_league, community_map, source_url)
 
         elif league_info['stream'] == 'TeamLinkt':
             # Fetch the page to find available seasons (e.g. Seeding vs Regular)
@@ -800,9 +802,9 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                         db.refresh(league)
                 
                 print(f"  Fetching TeamLinkt {season_name} - {l_type} (SID: {tl_season['id']})...")
-                data = fetch_teamlinkt_data(league_info['url'], league_info['slug'], season_id=tl_season['id'])
+                data, source_url = fetch_teamlinkt_data(league_info['url'], league_info['slug'], season_id=tl_season['id'])
                 with db_lock:
-                    save_standings(db, data, season, league, community_map)
+                    save_standings(db, data, season, league, community_map, source_url)
                 
         else:
             # Legacy/Standard
@@ -942,9 +944,10 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                              soup_fallback = get_soup(season_info['url'])
                              if soup_fallback:
                                  data = parse_standings(soup_fallback)
+                                 target_url = season_info['url'] # Update target_url if fallback used
                         
                         with db_lock:
-                            save_standings(db, data, season, league, community_map)
+                            save_standings(db, data, season, league, community_map, target_url)
                         
             # Return known seasons for tournament processing (from the main url)
             # This is a bit loose but tournaments are usually linked to the main season slug
@@ -998,7 +1001,7 @@ def process_tournament(t_info, season_slug, community_map):
             data = parse_brackets(soup)
             
         with db_lock:
-            save_standings(db, data, season, league, community_map)
+            save_standings(db, data, season, league, community_map, t_info['url'])
             
     except Exception as e:
         print(f"Error processing tournament {t_info['name']}: {e}")
@@ -1109,9 +1112,9 @@ def fetch_u11_seeding_2024_2025(community_map):
                         db.refresh(league)
                 
                 # Fetch Data
-                data = fetch_ramp_data(full_url, game_type_id, season_id)
+                data, source_url = fetch_ramp_data(full_url, game_type_id, season_id)
                 with db_lock:
-                    save_standings(db, data, season, league, community_map)
+                    save_standings(db, data, season, league, community_map, source_url)
                     
     except Exception as e:
         print(f"Error fetching U11 Seeding 2024-2025: {e}")
@@ -1121,21 +1124,11 @@ def fetch_u11_seeding_2024_2025(community_map):
 def sync_data(reset=False):
     if reset:
         print("Resetting database... Deleting all existing data.")
-        db = SessionLocal()
         try:
-            # Delete in order to respect foreign keys
-            db.query(Standing).delete()
-            db.query(Team).delete()
-            db.query(League).delete()
-            db.query(Season).delete()
-            db.query(Community).delete()
-            db.commit()
+            Base.metadata.drop_all(bind=engine)
             print("Database reset complete.")
         except Exception as e:
             print(f"Error resetting database: {e}")
-            db.rollback()
-        finally:
-            db.close()
 
     init_db()
     
