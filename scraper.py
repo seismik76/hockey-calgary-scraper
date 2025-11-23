@@ -1005,6 +1005,119 @@ def process_tournament(t_info, season_slug, community_map):
     finally:
         db.close()
 
+def fetch_u11_seeding_2024_2025(community_map):
+    print("Fetching U11 Seeding data for 2024-2025 (RAMP)...")
+    url = "http://hockeycalgary.msa4.rampinteractive.com/division/3300/"
+    soup = get_soup(url)
+    if not soup:
+        print("  Could not fetch U11 division list.")
+        return
+
+    # Find all division links
+    # They look like /division/3300/XXXXX/standings
+    links = soup.find_all('a', href=True)
+    
+    season_id = "10604" # 2024-2025
+    game_type_id = "8361" # Seeding
+    season_name = "2024-2025"
+    
+    db = SessionLocal()
+    try:
+        # Ensure Season exists
+        with db_lock:
+            season = db.query(Season).filter_by(name=season_name).first()
+            if not season:
+                season = Season(name=season_name)
+                db.add(season)
+                db.commit()
+                db.refresh(season)
+        
+        processed_slugs = set()
+
+        for link in links:
+            href = link['href']
+            if '/division/3300/' in href and 'standings' in href:
+                # Extract Division Name
+                # The link text is usually "Standings", we need to find the header
+                # Similar logic to get_ramp_leagues
+                
+                # Traverse up to find a header for the league name
+                parent = link.parent
+                found_name = None
+                
+                # Go up 5 levels max
+                curr = parent
+                for _ in range(5):
+                    if not curr: break
+                    
+                    # Check previous siblings for headers
+                    prev = curr.find_previous_sibling(['h1', 'h2', 'h3', 'h4', 'h5', 'div'])
+                    if prev:
+                        text = prev.get_text(strip=True)
+                        if text and len(text) < 50 and 'Games' not in text:
+                            found_name = text
+                            break
+                    
+                    header = curr.find(['h1', 'h2', 'h3', 'h4', 'h5'])
+                    if header:
+                         text = header.get_text(strip=True)
+                         if text:
+                             found_name = text
+                             break
+                             
+                    curr = curr.parent
+                
+                if not found_name:
+                    continue
+                    
+                full_url = f"http://hockeycalgary.msa4.rampinteractive.com{href}"
+                slug = href.replace('/division/', '').replace('/standings', '')
+                
+                if slug in processed_slugs:
+                    continue
+                processed_slugs.add(slug)
+
+                # Construct League Name and Slug
+                # Ensure we don't duplicate "Seeding" in the name if it's already there
+                if "Seeding" in found_name:
+                    league_name = found_name
+                else:
+                    league_name = f"{found_name} - Seeding"
+                    
+                league_slug = f"{slug}-seeding"
+                league_stream = "RAMP"
+                league_type = "Seeding"
+                
+                print(f"  Processing {league_name}...")
+                
+                with db_lock:
+                    league = db.query(League).filter_by(
+                        slug=league_slug,
+                        stream=league_stream,
+                        type=league_type
+                    ).first()
+                    
+                    if not league:
+                        league = League(
+                            name=league_name,
+                            slug=league_slug,
+                            stream=league_stream,
+                            type=league_type
+                        )
+                        db.add(league)
+                        db.commit()
+                        db.refresh(league)
+                
+                # Fetch Data
+                data = fetch_ramp_data(full_url, game_type_id, season_id)
+                with db_lock:
+                    save_standings(db, data, season, league, community_map)
+                    
+    except Exception as e:
+        print(f"Error fetching U11 Seeding 2024-2025: {e}")
+    finally:
+        db.close()
+
 def sync_data(reset=False):
     if reset:
         print("Resetting database... Deleting all existing data.")
@@ -1114,6 +1227,9 @@ def sync_data(reset=False):
         
         concurrent.futures.wait(futures)
     
+    # Fetch specific U11 Seeding data for 2024-2025
+    fetch_u11_seeding_2024_2025(community_map)
+
     print("Sync complete.")
 
 if __name__ == "__main__":
