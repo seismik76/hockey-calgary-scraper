@@ -1121,9 +1121,131 @@ def fetch_u11_seeding_2024_2025(community_map):
     finally:
         db.close()
 
-def sync_data(reset=False):
+def fetch_alberta_one_u11_2023(community_map):
+    print("Fetching U11 data for 2023-2024 (Alberta One)...")
+    base_url = "https://albertaonehockey.ca"
+    url = f"{base_url}/division/3300/"
+    soup = get_soup(url)
+    if not soup:
+        print("  Could not fetch Alberta One U11 division list.")
+        return
+
+    # Find all division links
+    links = soup.find_all('a', href=True)
+    
+    season_id = "10603" # 2023-2024
+    season_name = "2023-2024"
+    
+    # Game Types: Seeding (8361), League (8814)
+    game_types = [
+        {'id': '8361', 'name': 'Seeding', 'type': 'Seeding'},
+        {'id': '8814', 'name': 'Regular', 'type': 'Regular'}
+    ]
+    
+    db = SessionLocal()
+    try:
+        # Ensure Season exists
+        with db_lock:
+            season = db.query(Season).filter_by(name=season_name).first()
+            if not season:
+                season = Season(name=season_name)
+                db.add(season)
+                db.commit()
+                db.refresh(season)
+        
+        processed_slugs = set()
+
+        for link in links:
+            href = link['href']
+            if '/division/3300/' in href and 'standings' in href:
+                # Extract Division Name
+                parent = link.parent
+                found_name = None
+                
+                # Go up 5 levels max
+                curr = parent
+                for _ in range(5):
+                    if not curr: break
+                    
+                    prev = curr.find_previous_sibling(['h1', 'h2', 'h3', 'h4', 'h5', 'div'])
+                    if prev:
+                        text = prev.get_text(strip=True)
+                        if text and len(text) < 50 and 'Games' not in text:
+                            found_name = text
+                            break
+                    
+                    header = curr.find(['h1', 'h2', 'h3', 'h4', 'h5'])
+                    if header:
+                         text = header.get_text(strip=True)
+                         if text:
+                             found_name = text
+                             break
+                             
+                    curr = curr.parent
+                
+                if not found_name:
+                    continue
+                    
+                full_url = f"{base_url}{href}"
+                slug = href.replace('/division/', '').replace('/standings', '')
+                
+                if slug in processed_slugs:
+                    continue
+                processed_slugs.add(slug)
+
+                for gt in game_types:
+                    # Construct League Name and Slug
+                    league_name = found_name
+                    if gt['type'] != 'Regular' and gt['type'] not in league_name:
+                        league_name = f"{league_name} - {gt['type']}"
+                        
+                    league_slug = f"abone-{slug}-{gt['name'].lower()}"
+                    league_stream = "AlbertaOne"
+                    league_type = gt['type']
+                    
+                    # print(f"  Processing {league_name} ({gt['name']})...")
+                    
+                    with db_lock:
+                        league = db.query(League).filter_by(
+                            slug=league_slug,
+                            stream=league_stream,
+                            type=league_type
+                        ).first()
+                        
+                        if not league:
+                            league = League(
+                                name=league_name,
+                                slug=league_slug,
+                                stream=league_stream,
+                                type=league_type
+                            )
+                            db.add(league)
+                            db.commit()
+                            db.refresh(league)
+                    
+                    # Fetch Data
+                    # Note: fetch_ramp_data handles the API call. 
+                    # We need to ensure it finds the correct assoc_id for Alberta One.
+                    data, source_url = fetch_ramp_data(full_url, gt['id'], season_id)
+                    
+                    if data:
+                        print(f"    Found {len(data)} teams for {league_name}")
+                        with db_lock:
+                            save_standings(db, data, season, league, community_map, source_url)
+                    
+    except Exception as e:
+        print(f"Error fetching Alberta One U11 2023-2024: {e}")
+    finally:
+        db.close()
+
+def sync_data(reset=False, progress_callback=None):
+    if progress_callback:
+        progress_callback(0, "Starting sync...")
+
     if reset:
         print("Resetting database... Deleting all existing data.")
+        if progress_callback:
+            progress_callback(0, "Resetting database...")
         try:
             Base.metadata.drop_all(bind=engine)
             print("Database reset complete.")
@@ -1136,6 +1258,8 @@ def sync_data(reset=False):
     
     # 1. Fetch Legacy/Historical Leagues (from hockeycalgary.ca)
     print("Fetching legacy/historical leagues...")
+    if progress_callback:
+        progress_callback(5, "Fetching legacy/historical leagues...")
     legacy_leagues = get_leagues() # Current season
     
     # Add historical seasons
@@ -1148,15 +1272,20 @@ def sync_data(reset=False):
     
     # 2. Fetch RAMP Leagues (U11)
     print("Fetching RAMP leagues (U11)...")
+    if progress_callback:
+        progress_callback(10, "Fetching RAMP leagues...")
     ramp_leagues = get_ramp_leagues()
     print(f"Found {len(ramp_leagues)} RAMP leagues.")
     
     # 3. Fetch TeamLinkt Leagues (U13+)
     print("Fetching TeamLinkt leagues (U13+)...")
+    if progress_callback:
+        progress_callback(15, "Fetching TeamLinkt leagues...")
     teamlinkt_leagues = get_teamlinkt_leagues()
     print(f"Found {len(teamlinkt_leagues)} TeamLinkt leagues.")
     
     all_leagues = legacy_leagues + ramp_leagues + teamlinkt_leagues
+    total_leagues = len(all_leagues)
     
     # CLEANUP: Remove legacy data for 2025-2026 to avoid duplicates with TeamLinkt
     # Only remove U13 data, as U15 is still on legacy
@@ -1192,6 +1321,10 @@ def sync_data(reset=False):
     
     # Use ThreadPoolExecutor for parallel processing
     # Adjust max_workers based on your system capabilities and network limits
+    if progress_callback:
+        progress_callback(20, f"Processing {total_leagues} leagues...")
+
+    completed_leagues = 0
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = []
         for league_info in all_leagues:
@@ -1203,9 +1336,17 @@ def sync_data(reset=False):
             result = future.result()
             if result:
                 known_seasons.update(result)
+            
+            completed_leagues += 1
+            if progress_callback:
+                # Map 20% -> 90%
+                pct = 20 + int((completed_leagues / total_leagues) * 70)
+                progress_callback(pct, f"Processed {completed_leagues}/{total_leagues} leagues...")
 
     # Process tournaments (Legacy only for now)
     print("Fetching tournaments...")
+    if progress_callback:
+        progress_callback(90, "Fetching tournaments...")
     
     # Parallelize tournaments too
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -1221,9 +1362,18 @@ def sync_data(reset=False):
         concurrent.futures.wait(futures)
     
     # Fetch specific U11 Seeding data for 2024-2025
+    if progress_callback:
+        progress_callback(95, "Fetching U11 Seeding data...")
     fetch_u11_seeding_2024_2025(community_map)
 
+    # Fetch U11 data for 2023-2024 from Alberta One
+    if progress_callback:
+        progress_callback(98, "Fetching U11 2023-2024 data (Alberta One)...")
+    fetch_alberta_one_u11_2023(community_map)
+
     print("Sync complete.")
+    if progress_callback:
+        progress_callback(100, "Sync complete.")
 
 if __name__ == "__main__":
     sync_data()
