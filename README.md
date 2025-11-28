@@ -1,53 +1,92 @@
-# Hockey Calgary Scraper
+# Hockey Calgary Analytics & Scraper
 
-This project scrapes historical performance data for U9, U11, U13, and U15 teams from [hockeycalgary.ca](https://www.hockeycalgary.ca), including support for RAMP (U11) and TeamLinkt (U13+) data sources.
+A comprehensive data analytics platform for minor hockey in Calgary. This tool scrapes historical performance data from **Hockey Calgary** and **Alberta One**, stores it in a local database, and provides an interactive dashboard to analyze community performance, tiering compliance, and systemic trends.
 
-## Features
+## 🚀 Features
 
-- **Comprehensive Scraping**: Collects standings (GP, W, L, T, PTS, GF, GA, Diff) across multiple seasons.
-- **Historical Data**: Robust handling of legacy seasons and different league types (Regular, Seeding, Playoff).
-- **Data Storage**: Stores structured data in a SQLite database (`hockey_calgary.db`).
-- **Community Mapping**: Automatically maps team names to communities (e.g., "Bow Valley 1" -> "Bow Valley") with custom overrides via `community_map.json`.
-- **Web Dashboard**: Interactive Streamlit dashboard to visualize trends, compare communities, and filter data.
-- **Data Export**: Download full or filtered datasets directly to CSV from the dashboard.
+### 1. Robust Data Scraping
+*   **Multi-Source Support**: Scrapes data from:
+    *   **Hockey Calgary**: U9, U13, U15, U18 (TeamLinkt & Legacy backends).
+    *   **Alberta One**: U11 (RAMP Interactive backend).
+*   **Historical Data**: Collects standings (GP, W, L, T, PTS, GF, GA, Diff) across multiple seasons.
+*   **Smart Mapping**: Automatically maps team names to communities (e.g., "Bow Valley 1" -> "Bow Valley") with custom overrides via `community_map.json`.
+*   **Progress Tracking**: Real-time progress bars and status updates during data sync.
 
-## Setup
+### 2. Interactive Analytics Dashboard
+The project includes a powerful **Streamlit** dashboard with four dedicated analysis modules:
 
-1.  **Install Dependencies**:
-    The project uses Python. Ensure you have the required packages installed:
+#### 📊 General Analytics
+*   **Trend Analysis**: View performance trends over time for specific communities.
+*   **Head-to-Head**: Compare multiple communities directly.
+*   **Data Export**: Download full or filtered datasets to CSV.
+
+#### 📋 Tiering Compliance
+*   **Alberta One Grids**: Compares actual community team counts against the standardized Alberta One Tiering Grids.
+*   **Compliance Check**: Identifies if associations are over-tiering or under-tiering their teams based on their size.
+
+#### 📈 Community Size Analysis
+*   **Size vs. Performance**: Investigates the correlation between the size of an association (number of teams) and their on-ice success.
+*   **Binning Analysis**: Groups communities into sizes (Small, Medium, Large, Mega) to find "sweet spots" for performance.
+
+#### 📉 Systemic Dilution Analysis (New!)
+*   **The "Dilution Cliff"**: Visualizes the performance drop-off that occurs when a community grows just large enough to mandate a second Tier 1 team.
+*   **Threshold Detection**: Automatically identifies the "2-team threshold" for each age group.
+*   **Tiering Aggressiveness**: Measures the impact of "aggressive tiering" (% of teams in Tier 1) on overall community performance.
+*   **Visualizations**:
+    *   **Cliff Box Plots**: Compares "Just Below Threshold" vs "Just Above Threshold".
+    *   **Yearly Trends**: Color-coded strip plots showing performance by category over time.
+    *   **Aggressiveness Scatter**: Regression analysis of Tier 1 ratios vs performance.
+
+## 🛠️ Setup & Installation
+
+1.  **Prerequisites**:
+    *   Python 3.8+
+    *   Git
+
+2.  **Clone the Repository**:
+    ```bash
+    git clone https://github.com/seismik76/hockey-calgary-scraper.git
+    cd hockey-calgary-scraper
+    ```
+
+3.  **Install Dependencies**:
     ```bash
     pip install -r requirements.txt
     ```
 
-2.  **Database**:
-    The database is automatically created and initialized when you run the scraper.
+## 💻 Usage
 
-## Usage
-
-### 1. Web Analysis Dashboard (Recommended)
-
-The easiest way to use the tool is via the web dashboard.
+### 1. Launch the Dashboard (Recommended)
+The easiest way to use the tool is via the web interface.
 
 ```bash
 streamlit run app.py
 ```
 
-This will open a web page in your browser where you can:
-- **Run the Scraper**: Click the "Run Scraper" button in the sidebar to sync the latest data.
-- **Analyze Trends**: View performance trends over time for different communities.
-- **Compare Communities**: See head-to-head comparisons and rankings.
-- **Filter Data**: Filter by season, age category (U11, U13, etc.), community, and league type.
-- **Export Data**: Download the complete dataset or your filtered view as a CSV file.
+This will open `http://localhost:8501` in your browser.
 
-### 2. Sync Data (Command Line)
+### 2. Sync Data
+*   **Via Dashboard**: Click the **"Run Scraper (Sync Data)"** button in the sidebar.
+*   **Via Command Line**:
+    ```bash
+    python scraper.py
+    ```
 
-Alternatively, you can run the scraper from the command line:
+## 📂 Project Structure
 
-```bash
-python scraper.py
-```
+*   `app.py`: Main Streamlit application containing the dashboard logic and visualizations.
+*   `scraper.py`: Core scraping logic for Hockey Calgary and Alberta One.
+*   `hockey_calgary.db`: SQLite database storing all scraped data (created automatically).
+*   `utilities/`: Helper scripts for tiering logic and data parsing.
+*   `community_map.json`: Configuration file for mapping team names to community associations.
 
-This will:
+## 🔍 Methodology
+
+*   **Dilution Hypothesis**: The "Systemic Dilution" analysis tests the theory that splitting the top talent pool into two teams (when an association barely meets the size threshold) dilutes talent enough to negatively impact the *entire* age group's performance, not just the top teams.
+*   **Threshold Calculation**: The system dynamically calculates the "2-team threshold" based on historical data for each age category.
+
+## 📄 License
+[MIT License](LICENSE)
 - Fetch all leagues for U9, U11, U13, U15.
 - Handle data from Hockey Calgary (Legacy), RAMP, and TeamLinkt.
 - Update the database with the latest stats.
