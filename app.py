@@ -411,17 +411,20 @@ elif page == "Tier 1 Dilution Analysis":
     
     # --- NEW LOGIC: Threshold Analysis ---
     
-    # Identify the Threshold
-    # Find the minimum community size that has ever fielded 2 Tier 1 teams in this dataset
-    min_size_2_teams = merged_df[merged_df['Tier1_Count'] >= 2]['Total_Community_Teams'].min()
+    # Identify the Threshold PER SEASON
+    # Find the minimum community size that has fielded 2 Tier 1 teams for each season
+    season_thresholds = merged_df[merged_df['Tier1_Count'] >= 2].groupby('Season')['Total_Community_Teams'].min().to_dict()
     
-    if pd.isna(min_size_2_teams):
+    if not season_thresholds:
         st.warning("Not enough data to identify the 2-team threshold (no communities with 2+ Tier 1 teams found).")
     else:
-        threshold = int(min_size_2_teams)
-        
         # Define Groups relative to threshold
         def categorize_threshold(row):
+            season = row['Season']
+            if season not in season_thresholds:
+                return "Other"
+                
+            threshold = int(season_thresholds[season])
             size = row['Total_Community_Teams']
             t1_count = row['Tier1_Count']
             
@@ -470,11 +473,19 @@ elif page == "Tier 1 Dilution Analysis":
         
         # 1. The "Cliff" Comparison (Overall Performance)
         st.subheader("1. The 'Dilution Cliff' (Community-Wide)")
+        
+        # Display Thresholds
+        st.markdown("### Dynamic Thresholds by Season")
+        st.markdown("The size threshold for requiring 2 Tier 1 teams changes year-to-year based on Hockey Calgary rules.")
+        
+        threshold_df = pd.DataFrame(list(season_thresholds.items()), columns=['Season', 'Threshold (Teams)'])
+        st.table(threshold_df.sort_values('Season', ascending=False))
+
         st.markdown(f"""
         Comparing the **Average Performance of ALL Teams** in the community.
         
-        *   **Just Below Threshold**: {threshold-3}-{threshold-1} teams (1 Tier 1). Talent is concentrated.
-        *   **Just Above Threshold**: {threshold} teams (2 Tier 1s). Talent is diluted across all tiers.
+        *   **Just Below Threshold**: 1-3 teams smaller than that season's threshold (1 Tier 1).
+        *   **Just Above Threshold**: Exactly at that season's threshold (2 Tier 1s).
         """)
         
         # Filter for relevant categories
