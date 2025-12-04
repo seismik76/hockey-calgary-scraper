@@ -432,7 +432,7 @@ elif page == "Tier 1 Dilution Analysis":
                 return "Small (1 Team)"
             elif t1_count >= 2:
                 # Check if they are "Just Above" (Small 2-team associations)
-                if size <= threshold + 3: 
+                if size == threshold: 
                     return "Just Above Threshold (Diluted)"
                 return "Large (Established)"
             return "Other"
@@ -474,7 +474,7 @@ elif page == "Tier 1 Dilution Analysis":
         Comparing the **Average Performance of ALL Teams** in the community.
         
         *   **Just Below Threshold**: {threshold-3}-{threshold-1} teams (1 Tier 1). Talent is concentrated.
-        *   **Just Above Threshold**: {threshold}-{threshold+3} teams (2 Tier 1s). Talent is diluted across all tiers.
+        *   **Just Above Threshold**: {threshold} teams (2 Tier 1s). Talent is diluted across all tiers.
         """)
         
         # Filter for relevant categories
