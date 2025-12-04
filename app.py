@@ -662,9 +662,14 @@ elif page == "Tier 1 Dilution Analysis":
             
         st.plotly_chart(fig_cliff, use_container_width=True)
 
-        # --- NEW VISUALIZATION: Community Performance Trends ---
-        st.subheader("2. Community Performance Trends")
-        st.markdown("Track the performance of individual communities over time.")
+        # --- NEW VISUALIZATION: Impact of Aggressiveness on Performance ---
+        st.subheader("2. Impact of Tiering Aggressiveness")
+        st.markdown("""
+        This chart visualizes the relationship between **Tiering Aggressiveness** (% of teams in Tier 1) and **Overall Performance**.
+        *   **Trails** connect seasons chronologically.
+        *   **Down & Right**: Community became more aggressive and performance dropped (Dilution).
+        *   **Up & Right**: Community became more aggressive and performance improved/sustained.
+        """)
         
         # Calculate Tiering Aggressiveness for the trend chart
         merged_df['Tiering_Aggressiveness'] = merged_df['Tier1_Count'] / merged_df['Total_Community_Teams']
@@ -680,36 +685,35 @@ elif page == "Tier 1 Dilution Analysis":
         
         trend_agg_df = trend_agg_df.sort_values('Season')
         
-        # Add a base size so points with 0% aggressiveness are still visible
-        trend_agg_df['Visual_Size'] = trend_agg_df['Tiering_Aggressiveness'] + 0.05
-        
-        fig_trend = px.scatter(
+        # Create short season label for the chart text
+        trend_agg_df['Season_Label'] = trend_agg_df['Season'].apply(lambda x: "'" + x.split('-')[-1][-2:])
+
+        fig_trend = px.line(
             trend_agg_df,
-            x='Season',
+            x='Tiering_Aggressiveness',
             y='Overall_Performance',
             color='Community',
-            size='Visual_Size',
+            text='Season_Label',
+            markers=True,
             hover_data={
-                'Visual_Size': False,
+                'Season': True,
                 'Tiering_Aggressiveness': ':.1%',
+                'Overall_Performance': ':.3f',
                 'Total_Community_Teams': True,
                 'Tier1_Count': True,
-                'Season': True,
-                'Overall_Performance': ':.3f'
+                'Season_Label': False
             },
-            title=f"Community Performance & Aggressiveness Trends (Aggregated)",
+            title=f"Performance vs. Tiering Aggressiveness (Trajectory)",
             labels={
                 'Overall_Performance': f"Avg Community {selected_metric_label}",
-                'Tiering_Aggressiveness': 'Aggressiveness'
-            },
-            size_max=25
+                'Tiering_Aggressiveness': 'Tiering Aggressiveness (% T1)'
+            }
         )
         
-        # Connect dots with lines to show the trend
-        fig_trend.update_traces(mode='lines+markers')
+        fig_trend.update_traces(textposition="top center")
+        fig_trend.update_layout(xaxis_tickformat='.0%')
         
         st.plotly_chart(fig_trend, use_container_width=True)
-        st.caption("ℹ️ **Bubble Size** represents **Tiering Aggressiveness**. Larger bubbles = Higher % of teams in Tier 1.")
 
     # 5. Data Table
     with st.expander("View Analysis Data"):
