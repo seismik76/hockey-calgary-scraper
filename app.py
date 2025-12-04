@@ -709,6 +709,38 @@ elif page == "Tier 1 Dilution Analysis":
         
         st.plotly_chart(fig_agg, use_container_width=True)
 
+        # --- NEW VISUALIZATION: Community Performance Trends ---
+        st.subheader("5. Community Performance Trends")
+        st.markdown("Track the performance of individual communities over time.")
+        
+        # Filter for specific communities
+        all_communities = sorted(merged_df['Community'].unique())
+        default_communities = all_communities[:5] if len(all_communities) > 0 else []
+        
+        selected_trend_communities = st.multiselect(
+            "Select Communities to Compare",
+            all_communities,
+            default=default_communities
+        )
+        
+        if selected_trend_communities:
+            trend_df = merged_df[merged_df['Community'].isin(selected_trend_communities)].copy()
+            trend_df = trend_df.sort_values('Season')
+            
+            fig_trend = px.line(
+                trend_df,
+                x='Season',
+                y='Overall_Performance',
+                color='Community',
+                markers=True,
+                title=f"Community Performance History ({selected_metric_label})",
+                labels={'Overall_Performance': f"Avg Community {selected_metric_label}"},
+                hover_data=['Total_Community_Teams', 'Tier1_Count']
+            )
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("Select communities above to see the trend line.")
+
     # 5. Data Table
     with st.expander("View Analysis Data"):
         st.dataframe(merged_df.sort_values(by='Total_Community_Teams'))
