@@ -546,7 +546,19 @@ elif page == "Tier 1 Dilution Analysis":
         # --- Create Labels for Plots ---
         def get_label(row):
             name = row['Community']
-            overrides = {"Knights": "K", "McKnight": "MK", "Wolverines": "WL", "Southwest": "SW", "Springbank": "SB"}
+            overrides = {
+                "Bow River": "BR",
+                "Bow Valley": "BV",
+                "Glenlake": "GL",
+                "Knights": "K",
+                "McKnight": "MK",
+                "North West": "NW",
+                "Raiders": "R",
+                "Southwest": "SW",
+                "Springbank": "SB",
+                "Trails West": "TW",
+                "Wolverines": "W"
+            }
             abbrev = overrides.get(name, name[:2].upper())
             season_short = row['Season'].split('-')[-1][-2:]
             return f"{abbrev}-{season_short} ({row['Age Category']})"
