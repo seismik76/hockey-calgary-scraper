@@ -599,22 +599,27 @@ elif page == "Tier 1 Dilution Analysis":
         # --- NEW VISUALIZATION: Yearly Performance by Category ---
         st.subheader("3. Yearly Performance Trends")
         st.markdown(f"""
-        Performance over time, categorized by community status relative to the threshold (**{threshold} teams**).
+        Performance over time, categorized by community status relative to the seasonal threshold.
         *   <span style='color:#2ca02c'>**Single Tier 1 Team**</span>: Any size, but only 1 Tier 1 team.
-        *   <span style='color:#bcbd22'>**Threshold Size ({threshold})**</span>: The specific size that forces the split to 2 teams.
-        *   <span style='color:#1f77b4'>**Established (> {threshold})**</span>: Larger communities comfortably supporting 2+ teams.
+        *   <span style='color:#bcbd22'>**Threshold Size**</span>: The specific size that forces the split to 2 teams.
+        *   <span style='color:#1f77b4'>**Established**</span>: Larger communities comfortably supporting 2+ teams.
         """, unsafe_allow_html=True)
 
         def categorize_yearly(row):
+            season = row['Season']
+            if season not in season_thresholds:
+                return "Other"
+            
+            thresh = int(season_thresholds[season])
             size = row['Total_Community_Teams']
             t1_count = row['Tier1_Count']
             
             if t1_count == 1:
                 return "Single Tier 1 Team"
             elif t1_count >= 2:
-                if size == threshold:
-                    return f"Threshold Size ({threshold})"
-                elif size > threshold:
+                if size == thresh:
+                    return "Threshold Size"
+                elif size > thresh:
                     return "Established (> Threshold)"
             return "Other"
 
@@ -637,7 +642,7 @@ elif page == "Tier 1 Dilution Analysis":
             labels={'Overall_Performance': f"Avg Community {selected_metric_label}"},
             color_discrete_map={
                 "Single Tier 1 Team": "#2ca02c", # Green
-                f"Threshold Size ({threshold})": "#bcbd22", # Yellow
+                "Threshold Size": "#bcbd22", # Yellow
                 "Established (> Threshold)": "#1f77b4" # Blue
             }
         )
