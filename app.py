@@ -551,7 +551,7 @@ elif page == "Tier 1 Dilution Analysis":
 
         # Update Layout
         fig_cliff.update_layout(
-            title=f"Community-Wide Performance Drop at Threshold ({threshold} Teams)",
+            title=f"Community-Wide Performance Drop at Threshold",
             yaxis_title=f"Avg Community {selected_metric_label}",
             xaxis=dict(
                 tickmode='array',
