@@ -1,6 +1,6 @@
 # Hockey Calgary Analytics & Scraper
 
-A comprehensive data analytics platform for minor hockey in Calgary. This tool scrapes historical performance data from **Hockey Calgary** and **Alberta One**, stores it in a local database, and provides an interactive dashboard to analyze community performance, tiering compliance, and systemic trends.
+A comprehensive data analytics platform for minor hockey in Calgary. This tool scrapes historical performance data from **Hockey Calgary** and **Alberta One**, stores it in a local database, and provides an interactive dashboard to analyze community performance and systemic trends.
 
 ## 🚀 Features
 
@@ -13,27 +13,22 @@ A comprehensive data analytics platform for minor hockey in Calgary. This tool s
 *   **Progress Tracking**: Real-time progress bars and status updates during data sync.
 
 ### 2. Interactive Analytics Dashboard
-The project includes a powerful **Streamlit** dashboard with four dedicated analysis modules:
+The project includes a powerful **Streamlit** dashboard with two dedicated analysis modules:
 
 #### 📊 General Analytics
 *   **Trend Analysis**: View performance trends over time for specific communities.
 *   **Head-to-Head**: Compare multiple communities directly.
 *   **Data Export**: Download full or filtered datasets to CSV.
 
-#### 📋 Tiering Compliance
-*   **Alberta One Grids**: Compares actual community team counts against the standardized Alberta One Tiering Grids.
-*   **Compliance Check**: Identifies if associations are over-tiering or under-tiering their teams based on their size.
-
-#### 📈 Community Size Analysis
-*   **Size vs. Performance**: Investigates the correlation between the size of an association (number of teams) and their on-ice success.
-*   **Binning Analysis**: Groups communities into sizes (Small, Medium, Large, Mega) to find "sweet spots" for performance.
-
 #### 📉 Systemic Dilution Analysis (New!)
 *   **The "Dilution Cliff"**: Visualizes the performance drop-off that occurs when a community grows just large enough to mandate a second Tier 1 team.
 *   **Threshold Detection**: Automatically identifies the "2-team threshold" for each age group.
 *   **Tiering Aggressiveness**: Measures the impact of "aggressive tiering" (% of teams in Tier 1) on overall community performance.
 *   **Visualizations**:
-    *   **Cliff Box Plots**: Compares "Just Below Threshold" vs "Just Above Threshold".
+    *   **Cliff Box Plots**: Compares performance across three distinct cohorts:
+        *   **1 Tier 1 Team**: Communities of any size that fielded only a single Tier 1 team.
+        *   **Smallest Requiring 2 Tier 1**: Communities at the specific size threshold where a second Tier 1 team is mandated.
+        *   **Large Communities**: Larger associations that comfortably support two or more Tier 1 teams.
     *   **Yearly Trends**: Color-coded strip plots showing performance by category over time.
     *   **Aggressiveness Scatter**: Regression analysis of Tier 1 ratios vs performance.
 
