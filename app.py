@@ -339,15 +339,38 @@ elif page == "Tier 1 Dilution Analysis":
     # --- Filters ---
     st.sidebar.header("Analysis Filters")
     
-    # Age Category
-    age_categories = sorted(df['Age Category'].unique().tolist())
-    valid_ages = [age for age in ['U11', 'U13', 'U15', 'U18'] if age in age_categories]
-    selected_age = st.sidebar.selectbox("Select Age Category", valid_ages, index=0)
-    
-    # Season Type
+    # Season Filter
+    all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
+    default_seasons = ['2025-2026'] if '2025-2026' in all_seasons else [all_seasons[0]] if all_seasons else []
+    selected_seasons = st.sidebar.multiselect("Select Seasons", all_seasons, default=default_seasons)
+
+    # Season Type Filter
     season_types = df['Type'].unique().tolist()
-    default_type = 'Regular' if 'Regular' in season_types else season_types[0]
-    selected_type = st.sidebar.selectbox("Season Type", season_types, index=season_types.index(default_type) if default_type in season_types else 0)
+    default_types = ['Seeding'] if 'Seeding' in season_types else [season_types[0]] if season_types else []
+    selected_types = st.sidebar.multiselect("Season Type", season_types, default=default_types)
+
+    # Age Category Filter
+    age_categories = sorted(df['Age Category'].unique().tolist())
+    default_ages = [age for age in ['U11', 'U13'] if age in age_categories]
+    selected_ages = st.sidebar.multiselect("Age Category", age_categories, default=default_ages)
+
+    # Community Filter
+    all_communities = sorted(df['Community'].unique().tolist())
+    
+    # Division Selector
+    division = st.sidebar.radio("Hockey Calgary Division", ["All", "North", "South"], index=0)
+
+    north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
+    south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
+
+    if division == "North":
+        community_options = [c for c in all_communities if c in north_communities]
+    elif division == "South":
+        community_options = [c for c in all_communities if c in south_communities]
+    else:
+        community_options = all_communities
+        
+    selected_communities = st.sidebar.multiselect("Select Communities", community_options, default=community_options)
 
     # Metric Selector
     metric_map = {
@@ -362,9 +385,15 @@ elif page == "Tier 1 Dilution Analysis":
     
     # 1. Filter Base Data
     analysis_df = df[
-        (df['Age Category'] == selected_age) &
-        (df['Type'] == selected_type)
+        (df['Season'].isin(selected_seasons)) &
+        (df['Type'].isin(selected_types)) &
+        (df['Age Category'].isin(selected_ages)) &
+        (df['Community'].isin(selected_communities))
     ].copy()
+    
+    if analysis_df.empty:
+        st.warning("No data matches the selected filters.")
+        st.stop()
     
     # 2. Identify Elite (AA/HADP) to exclude from Community Size Count
     def is_elite(league_name):
@@ -375,11 +404,11 @@ elif page == "Tier 1 Dilution Analysis":
         
     analysis_df['Is_Elite'] = analysis_df['League'].apply(is_elite)
     
-    # 3. Calculate Community Size (Total Non-Elite Teams) per Season/Community
-    # We use the full dataset (minus elite) to count total teams
+    # 3. Calculate Community Size (Total Non-Elite Teams) per Season/Community/Age
     non_elite_df = analysis_df[~analysis_df['Is_Elite']].copy()
     
-    community_sizes = non_elite_df.groupby(['Season', 'Community'])['Team'].nunique().reset_index()
+    # Group by Age Category as well
+    community_sizes = non_elite_df.groupby(['Season', 'Community', 'Age Category'])['Team'].nunique().reset_index()
     community_sizes.rename(columns={'Team': 'Total_Community_Teams'}, inplace=True)
     
     # 4. Identify Tier 1 Teams (for Threshold Logic)
@@ -392,18 +421,17 @@ elif page == "Tier 1 Dilution Analysis":
         
     analysis_df['Is_Tier_1'] = analysis_df['League'].apply(is_tier_1)
     
-    # Calculate Tier 1 Count per Community/Season
-    tier1_counts = analysis_df[analysis_df['Is_Tier_1']].groupby(['Season', 'Community'])['Team'].nunique().reset_index()
+    # Calculate Tier 1 Count per Community/Season/Age
+    tier1_counts = analysis_df[analysis_df['Is_Tier_1']].groupby(['Season', 'Community', 'Age Category'])['Team'].nunique().reset_index()
     tier1_counts.rename(columns={'Team': 'Tier1_Count'}, inplace=True)
     
-    # 5. Calculate OVERALL Performance per Community/Season (Non-Elite)
-    # This is the key change: We look at the average of ALL teams in the community
-    overall_stats = non_elite_df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
+    # 5. Calculate OVERALL Performance per Community/Season/Age
+    overall_stats = non_elite_df.groupby(['Season', 'Community', 'Age Category'])[selected_metric].mean().reset_index()
     overall_stats.rename(columns={selected_metric: 'Overall_Performance'}, inplace=True)
     
     # 6. Merge Data
-    merged_df = pd.merge(community_sizes, tier1_counts, on=['Season', 'Community'], how='left')
-    merged_df = pd.merge(merged_df, overall_stats, on=['Season', 'Community'], how='left')
+    merged_df = pd.merge(community_sizes, tier1_counts, on=['Season', 'Community', 'Age Category'], how='left')
+    merged_df = pd.merge(merged_df, overall_stats, on=['Season', 'Community', 'Age Category'], how='left')
     
     # Fill NaN Tier 1 Count with 0
     merged_df['Tier1_Count'] = merged_df['Tier1_Count'].fillna(0)
@@ -411,30 +439,51 @@ elif page == "Tier 1 Dilution Analysis":
     
     # --- NEW LOGIC: Threshold Analysis ---
     
-    # Identify the Threshold PER SEASON
-    # Find the minimum community size that has fielded 2 Tier 1 teams for each season
-    season_thresholds = merged_df[merged_df['Tier1_Count'] >= 2].groupby('Season')['Total_Community_Teams'].min().to_dict()
+    # Identify the Threshold PER SEASON AND AGE
+    # We calculate thresholds from the FULL dataset (filtered by Type/Age only) to ensure accuracy
+    # even if specific communities are filtered out of the view.
+    full_analysis_df = df[
+        (df['Type'].isin(selected_types)) & 
+        (df['Age Category'].isin(selected_ages))
+    ].copy()
+    full_analysis_df['Is_Tier_1'] = full_analysis_df['League'].apply(is_tier_1)
+    full_analysis_df['Is_Elite'] = full_analysis_df['League'].apply(is_elite)
+    full_non_elite = full_analysis_df[~full_analysis_df['Is_Elite']]
     
-    if not season_thresholds:
-        st.warning("Not enough data to identify the 2-team threshold (no communities with 2+ Tier 1 teams found).")
+    full_sizes = full_non_elite.groupby(['Season', 'Community', 'Age Category'])['Team'].nunique().reset_index()
+    full_sizes.rename(columns={'Team': 'Total_Community_Teams'}, inplace=True)
+    
+    full_t1 = full_analysis_df[full_analysis_df['Is_Tier_1']].groupby(['Season', 'Community', 'Age Category'])['Team'].nunique().reset_index()
+    full_t1.rename(columns={'Team': 'Tier1_Count'}, inplace=True)
+    
+    full_merged = pd.merge(full_sizes, full_t1, on=['Season', 'Community', 'Age Category'], how='left')
+    full_merged['Tier1_Count'] = full_merged['Tier1_Count'].fillna(0)
+    
+    # Calculate thresholds map: (Season, Age) -> Min Size
+    threshold_data = full_merged[full_merged['Tier1_Count'] >= 2].groupby(['Season', 'Age Category'])['Total_Community_Teams'].min().reset_index()
+    
+    season_age_thresholds = {}
+    for _, row in threshold_data.iterrows():
+        season_age_thresholds[(row['Season'], row['Age Category'])] = row['Total_Community_Teams']
+
+    if not season_age_thresholds:
+        st.warning("Not enough data to identify 2-team thresholds (no communities with 2+ Tier 1 teams found in selected scope).")
     else:
         # Define Groups relative to threshold
         def categorize_threshold(row):
-            season = row['Season']
-            if season not in season_thresholds:
+            key = (row['Season'], row['Age Category'])
+            if key not in season_age_thresholds:
                 return "Other"
                 
-            threshold = int(season_thresholds[season])
+            threshold = int(season_age_thresholds[key])
             size = row['Total_Community_Teams']
             t1_count = row['Tier1_Count']
             
             if t1_count == 1:
-                # Check if they are "Just Below" (Large 1-team associations)
                 if size >= threshold - 3: 
                     return "Just Below Threshold (1 Team)"
                 return "Small (1 Team)"
             elif t1_count >= 2:
-                # Check if they are "Just Above" (Small 2-team associations)
                 if size == threshold: 
                     return "Just Above Threshold (Diluted)"
                 return "Large (Established)"
@@ -445,47 +494,32 @@ elif page == "Tier 1 Dilution Analysis":
         # --- Create Labels for Plots ---
         def get_label(row):
             name = row['Community']
-            
-            # Specific Overrides
-            overrides = {
-                "Knights": "K",
-                "McKnight": "MK",
-                "Wolverines": "WL",
-                "Southwest": "SW",
-                "Springbank": "SB"
-            }
-            
-            if name in overrides:
-                abbrev = overrides[name]
-            else:
-                # Default Abbreviation Logic
-                words = name.split()
-                if len(words) > 1: abbrev = "".join([w[0] for w in words]).upper()
-                else: abbrev = name[:2].upper()
-            
-            # Season Logic: 2024-2025 -> 25
+            overrides = {"Knights": "K", "McKnight": "MK", "Wolverines": "WL", "Southwest": "SW", "Springbank": "SB"}
+            abbrev = overrides.get(name, name[:2].upper())
             season_short = row['Season'].split('-')[-1][-2:]
-            return f"{abbrev}-{season_short}"
+            return f"{abbrev}-{season_short} ({row['Age Category']})"
 
         merged_df['Label'] = merged_df.apply(get_label, axis=1)
 
         # --- Visualizations ---
         
-        # 1. The "Cliff" Comparison (Overall Performance)
+        # 1. The "Cliff" Comparison
         st.subheader("1. The 'Dilution Cliff' (Community-Wide)")
         
-        # Display Thresholds
-        st.markdown("### Dynamic Thresholds by Season")
-        st.markdown("The size threshold for requiring 2 Tier 1 teams changes year-to-year based on Hockey Calgary rules.")
+        # Display Thresholds Table
+        st.markdown("### Dynamic Thresholds")
+        st.markdown("The size threshold for requiring 2 Tier 1 teams varies by Season and Age Category.")
         
-        threshold_df = pd.DataFrame(list(season_thresholds.items()), columns=['Season', 'Threshold (Teams)'])
-        st.table(threshold_df.sort_values('Season', ascending=False))
+        thresh_display = pd.DataFrame([
+            {"Season": k[0], "Age Category": k[1], "Threshold (Teams)": v} 
+            for k, v in season_age_thresholds.items()
+        ])
+        st.table(thresh_display.sort_values(['Season', 'Age Category'], ascending=[False, True]))
 
         st.markdown(f"""
         Comparing the **Average Performance of ALL Teams** in the community.
-        
-        *   **Just Below Threshold**: 1-3 teams smaller than that season's threshold (1 Tier 1).
-        *   **Just Above Threshold**: Exactly at that season's threshold (2 Tier 1s).
+        *   **Just Below Threshold**: 1-3 teams smaller than the threshold (1 Tier 1).
+        *   **Just Above Threshold**: Exactly at the threshold (2 Tier 1s).
         """)
         
         # Filter for relevant categories
@@ -578,7 +612,7 @@ elif page == "Tier 1 Dilution Analysis":
                 y='Overall_Performance',
                 color='Tier 1 Teams',
                 symbol='Season',
-                hover_data=['Community', 'Season', 'Tier1_Count'],
+                hover_data=['Community', 'Season', 'Tier1_Count', 'Age Category'],
                 trendline="lowess",
                 title=f"Community-Wide {selected_metric_label} by Size",
                 labels={'Total_Community_Teams': 'Total Community Teams', 'Overall_Performance': f"Avg Community {selected_metric_label}"}
@@ -589,7 +623,7 @@ elif page == "Tier 1 Dilution Analysis":
                 x='Total_Community_Teams',
                 y='Overall_Performance',
                 color='Tier 1 Teams',
-                hover_data=['Community', 'Season', 'Tier1_Count'],
+                hover_data=['Community', 'Season', 'Tier1_Count', 'Age Category'],
                 title=f"Community-Wide {selected_metric_label} by Size",
                 labels={'Total_Community_Teams': 'Total Community Teams', 'Overall_Performance': f"Avg Community {selected_metric_label}"}
             )
@@ -606,11 +640,11 @@ elif page == "Tier 1 Dilution Analysis":
         """, unsafe_allow_html=True)
 
         def categorize_yearly(row):
-            season = row['Season']
-            if season not in season_thresholds:
+            key = (row['Season'], row['Age Category'])
+            if key not in season_age_thresholds:
                 return "Other"
             
-            thresh = int(season_thresholds[season])
+            thresh = int(season_age_thresholds[key])
             size = row['Total_Community_Teams']
             t1_count = row['Tier1_Count']
             
@@ -637,7 +671,7 @@ elif page == "Tier 1 Dilution Analysis":
             y='Overall_Performance',
             color='Yearly_Category',
             text='Label',
-            hover_data=['Community', 'Total_Community_Teams', 'Tier1_Count'],
+            hover_data=['Community', 'Total_Community_Teams', 'Tier1_Count', 'Age Category'],
             title=f"Community Performance by Season & Category",
             labels={'Overall_Performance': f"Avg Community {selected_metric_label}"},
             color_discrete_map={
@@ -670,7 +704,7 @@ elif page == "Tier 1 Dilution Analysis":
                 color='Threshold Category',
                 size='Total_Community_Teams',
                 text='Label',
-                hover_data=['Community', 'Season', 'Tier1_Count', 'Total_Community_Teams'],
+                hover_data=['Community', 'Season', 'Tier1_Count', 'Total_Community_Teams', 'Age Category'],
                 trendline="ols",
                 title=f"Impact of Tiering Aggressiveness on {selected_metric_label}",
                 labels={
@@ -691,7 +725,7 @@ elif page == "Tier 1 Dilution Analysis":
                 color='Threshold Category',
                 size='Total_Community_Teams',
                 text='Label',
-                hover_data=['Community', 'Season', 'Tier1_Count', 'Total_Community_Teams'],
+                hover_data=['Community', 'Season', 'Tier1_Count', 'Total_Community_Teams', 'Age Category'],
                 title=f"Impact of Tiering Aggressiveness on {selected_metric_label}",
                 labels={
                     'Tiering_Aggressiveness': 'Tiering Aggressiveness (Tier 1 / Total Teams)', 
@@ -713,52 +747,47 @@ elif page == "Tier 1 Dilution Analysis":
         st.subheader("5. Community Performance Trends")
         st.markdown("Track the performance of individual communities over time.")
         
-        # Filter for specific communities
-        all_communities = sorted(merged_df['Community'].unique())
-        default_communities = all_communities[:5] if len(all_communities) > 0 else []
+        # For the trend line, we aggregate by Season/Community (averaging across Age Categories if multiple selected)
+        # This gives a cleaner "Overall Community Health" view
+        trend_agg_df = merged_df.groupby(['Season', 'Community']).agg({
+            'Overall_Performance': 'mean',
+            'Tiering_Aggressiveness': 'mean',
+            'Total_Community_Teams': 'sum',
+            'Tier1_Count': 'sum'
+        }).reset_index()
         
-        selected_trend_communities = st.multiselect(
-            "Select Communities to Compare",
-            all_communities,
-            default=default_communities
+        trend_agg_df = trend_agg_df.sort_values('Season')
+        
+        # Add a base size so points with 0% aggressiveness are still visible
+        trend_agg_df['Visual_Size'] = trend_agg_df['Tiering_Aggressiveness'] + 0.05
+        
+        fig_trend = px.scatter(
+            trend_agg_df,
+            x='Season',
+            y='Overall_Performance',
+            color='Community',
+            size='Visual_Size',
+            hover_data={
+                'Visual_Size': False,
+                'Tiering_Aggressiveness': ':.1%',
+                'Total_Community_Teams': True,
+                'Tier1_Count': True,
+                'Season': True,
+                'Overall_Performance': ':.3f'
+            },
+            title=f"Community Performance & Aggressiveness Trends (Aggregated)",
+            labels={
+                'Overall_Performance': f"Avg Community {selected_metric_label}",
+                'Tiering_Aggressiveness': 'Aggressiveness'
+            },
+            size_max=25
         )
         
-        if selected_trend_communities:
-            trend_df = merged_df[merged_df['Community'].isin(selected_trend_communities)].copy()
-            trend_df = trend_df.sort_values('Season')
-            
-            # Add a base size so points with 0% aggressiveness are still visible
-            trend_df['Visual_Size'] = trend_df['Tiering_Aggressiveness'] + 0.05
-            
-            fig_trend = px.scatter(
-                trend_df,
-                x='Season',
-                y='Overall_Performance',
-                color='Community',
-                size='Visual_Size',
-                hover_data={
-                    'Visual_Size': False,
-                    'Tiering_Aggressiveness': ':.1%',
-                    'Total_Community_Teams': True,
-                    'Tier1_Count': True,
-                    'Season': True,
-                    'Overall_Performance': ':.3f'
-                },
-                title=f"Community Performance & Aggressiveness Trends",
-                labels={
-                    'Overall_Performance': f"Avg Community {selected_metric_label}",
-                    'Tiering_Aggressiveness': 'Aggressiveness'
-                },
-                size_max=25
-            )
-            
-            # Connect dots with lines to show the trend
-            fig_trend.update_traces(mode='lines+markers')
-            
-            st.plotly_chart(fig_trend, use_container_width=True)
-            st.caption("ℹ️ **Bubble Size** represents **Tiering Aggressiveness**. Larger bubbles = Higher % of teams in Tier 1.")
-        else:
-            st.info("Select communities above to see the trend line.")
+        # Connect dots with lines to show the trend
+        fig_trend.update_traces(mode='lines+markers')
+        
+        st.plotly_chart(fig_trend, use_container_width=True)
+        st.caption("ℹ️ **Bubble Size** represents **Tiering Aggressiveness**. Larger bubbles = Higher % of teams in Tier 1.")
 
     # 5. Data Table
     with st.expander("View Analysis Data"):
