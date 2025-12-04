@@ -459,12 +459,64 @@ elif page == "Tier 1 Dilution Analysis":
     full_merged = pd.merge(full_sizes, full_t1, on=['Season', 'Community', 'Age Category'], how='left')
     full_merged['Tier1_Count'] = full_merged['Tier1_Count'].fillna(0)
     
-    # Calculate thresholds map: (Season, Age) -> Min Size
-    threshold_data = full_merged[full_merged['Tier1_Count'] >= 2].groupby(['Season', 'Age Category'])['Total_Community_Teams'].min().reset_index()
-    
+    # Calculate thresholds map: (Season, Age) -> Inferred Threshold
+    # Algorithm: Find T that minimizes (Size < T & T1>=2) + (Size >= T & T1=1)
     season_age_thresholds = {}
-    for _, row in threshold_data.iterrows():
-        season_age_thresholds[(row['Season'], row['Age Category'])] = row['Total_Community_Teams']
+    outliers_map = {} # (Season, Age) -> List of outlier strings
+    threshold_summary_data = []
+
+    grouped_thresholds = full_merged.groupby(['Season', 'Age Category'])
+
+    for (season, age), group in grouped_thresholds:
+        best_t = 0
+        max_score = -1
+        best_outliers = []
+        
+        # Range of possible team sizes in this group
+        if group.empty: continue
+        min_teams = int(group['Total_Community_Teams'].min())
+        max_teams = int(group['Total_Community_Teams'].max())
+        
+        # Brute force search for best threshold
+        # We look for a transition point. 
+        # If no 2-team communities exist, threshold is effectively infinite (or max+1)
+        if group['Tier1_Count'].max() < 2:
+             season_age_thresholds[(season, age)] = 999
+             continue
+
+        for t in range(min_teams, max_teams + 2):
+            # Rule: If Size >= t, expect T1 >= 2. Else T1 = 1.
+            compliant = group[
+                ((group['Total_Community_Teams'] < t) & (group['Tier1_Count'] <= 1)) |
+                ((group['Total_Community_Teams'] >= t) & (group['Tier1_Count'] >= 2))
+            ]
+            score = len(compliant)
+            
+            if score > max_score:
+                max_score = score
+                best_t = t
+                
+                # Identify outliers for this T
+                non_compliant = group[
+                    ~(((group['Total_Community_Teams'] < t) & (group['Tier1_Count'] <= 1)) |
+                      ((group['Total_Community_Teams'] >= t) & (group['Tier1_Count'] >= 2)))
+                ]
+                
+                outlier_list = []
+                for _, row in non_compliant.iterrows():
+                    # reason = "Playing Up" if row['Tier1_Count'] >= 2 else "Playing Down"
+                    outlier_list.append(f"{row['Community']} ({int(row['Total_Community_Teams'])} teams, {int(row['Tier1_Count'])} T1)")
+                best_outliers = outlier_list
+        
+        season_age_thresholds[(season, age)] = best_t
+        outliers_map[(season, age)] = best_outliers
+        
+        threshold_summary_data.append({
+            "Season": season,
+            "Age Category": age,
+            "Inferred Threshold": best_t,
+            "Outliers": ", ".join(best_outliers) if best_outliers else "None"
+        })
 
     if not season_age_thresholds:
         st.warning("Not enough data to identify 2-team thresholds (no communities with 2+ Tier 1 teams found in selected scope).")
@@ -510,11 +562,11 @@ elif page == "Tier 1 Dilution Analysis":
         st.markdown("### Dynamic Thresholds")
         st.markdown("The size threshold for requiring 2 Tier 1 teams varies by Season and Age Category.")
         
-        thresh_display = pd.DataFrame([
-            {"Season": k[0], "Age Category": k[1], "Threshold (Teams)": v} 
-            for k, v in season_age_thresholds.items()
-        ])
-        st.table(thresh_display.sort_values(['Season', 'Age Category'], ascending=[False, True]))
+        if threshold_summary_data:
+            thresh_display = pd.DataFrame(threshold_summary_data)
+            st.table(thresh_display.sort_values(['Season', 'Age Category'], ascending=[False, True]))
+        else:
+            st.info("No threshold data available.")
 
         st.markdown(f"""
         Comparing the **Average Performance of ALL Teams** in the community.
