@@ -98,7 +98,7 @@ if st.sidebar.button("Run Scraper (Sync Data)"):
         progress_bar.progress(pct)
         status_text.text(msg)
 
-    with st.spinner("Scraping data from Hockey Calgary... This may take a minute."):
+    with st.spinner("Scraping data from Hockey Calgary... This can take up to 10 minutes."):
         # Capture stdout to show progress
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
