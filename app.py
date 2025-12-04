@@ -727,17 +727,36 @@ elif page == "Tier 1 Dilution Analysis":
             trend_df = merged_df[merged_df['Community'].isin(selected_trend_communities)].copy()
             trend_df = trend_df.sort_values('Season')
             
-            fig_trend = px.line(
+            # Add a base size so points with 0% aggressiveness are still visible
+            trend_df['Visual_Size'] = trend_df['Tiering_Aggressiveness'] + 0.05
+            
+            fig_trend = px.scatter(
                 trend_df,
                 x='Season',
                 y='Overall_Performance',
                 color='Community',
-                markers=True,
-                title=f"Community Performance History ({selected_metric_label})",
-                labels={'Overall_Performance': f"Avg Community {selected_metric_label}"},
-                hover_data=['Total_Community_Teams', 'Tier1_Count']
+                size='Visual_Size',
+                hover_data={
+                    'Visual_Size': False,
+                    'Tiering_Aggressiveness': ':.1%',
+                    'Total_Community_Teams': True,
+                    'Tier1_Count': True,
+                    'Season': True,
+                    'Overall_Performance': ':.3f'
+                },
+                title=f"Community Performance & Aggressiveness Trends",
+                labels={
+                    'Overall_Performance': f"Avg Community {selected_metric_label}",
+                    'Tiering_Aggressiveness': 'Aggressiveness'
+                },
+                size_max=25
             )
+            
+            # Connect dots with lines to show the trend
+            fig_trend.update_traces(mode='lines+markers')
+            
             st.plotly_chart(fig_trend, use_container_width=True)
+            st.caption("ℹ️ **Bubble Size** represents **Tiering Aggressiveness**. Larger bubbles = Higher % of teams in Tier 1.")
         else:
             st.info("Select communities above to see the trend line.")
 
