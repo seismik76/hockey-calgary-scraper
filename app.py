@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from sqlalchemy import create_engine
 from scraper import sync_data
+from database import init_db
 import sys
 from io import StringIO
 import time
@@ -20,6 +21,9 @@ st.set_page_config(page_title="Hockey Calgary Analytics", layout="wide")
 # Database Connection
 DB_URL = "sqlite:///hockey_calgary.db"
 engine = create_engine(DB_URL)
+
+# Initialize Database (Ensure tables exist)
+init_db()
 
 # --- Helper Functions ---
 
