@@ -770,18 +770,27 @@ if page == "Experiments":
     # Parse Tiers
     def get_tier(league_name):
         parsed = parse_tier_info(league_name)
-        return parsed.get('tier', None)
+        tier = parsed.get('tier', None)
+        if tier == 'AA':
+            return 0 # Treat AA as Tier 0
+        return tier
         
     exp_df['Tier'] = exp_df['League'].apply(get_tier)
+    # Ensure numeric
+    exp_df['Tier'] = pd.to_numeric(exp_df['Tier'], errors='coerce')
     exp_df = exp_df.dropna(subset=['Tier']) # Remove non-tiered leagues if any
+    
+    if exp_df.empty:
+        st.warning("No tiered data found for the selected filters.")
+        st.stop()
     
     # Visualization
     import plotly.graph_objects as go
     fig = go.Figure()
     
     # Determine X range based on data
-    min_tier = exp_df['Tier'].min()
-    max_tier = exp_df['Tier'].max()
+    min_tier = int(exp_df['Tier'].min())
+    max_tier = int(exp_df['Tier'].max())
     x_range = np.linspace(max(0, min_tier - 1), max_tier + 1, 100)
     
     for comm in exp_communities:
