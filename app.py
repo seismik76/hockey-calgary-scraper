@@ -19,6 +19,8 @@ except ImportError:
 # Page Config
 st.set_page_config(page_title="Hockey Calgary Analytics", layout="wide")
 
+st.warning("Disclaimer: this is a personal interest project and I don't stand behind any of it - this is a subject that I'm personally interested in and it's also a fun development project but I'm not accountable to anyone for it's accuracy")
+
 # Database Connection
 DB_URL = "sqlite:///hockey_calgary.db"
 engine = create_engine(DB_URL)
