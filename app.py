@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 from sqlalchemy import create_engine
 from scraper import sync_data
@@ -86,7 +87,7 @@ def load_data():
 st.sidebar.title("🏒 Hockey Calgary Analytics")
 
 # Navigation
-page = st.sidebar.radio("Navigation", ["Analytics", "Tier 1 Dilution Analysis"])
+page = st.sidebar.radio("Navigation", ["Analytics", "Tier 1 Dilution Analysis", "Experiments"])
 
 # Scraper Control
 st.sidebar.header("Data Sync")
@@ -720,4 +721,130 @@ elif page == "Tier 1 Dilution Analysis":
     # 5. Data Table
     with st.expander("View Analysis Data"):
         st.dataframe(merged_df.sort_values(by='Total_Community_Teams'))
+
+if page == "Experiments":
+    st.title("🔬 Experiments: Tier Distribution Analysis")
+    st.markdown("Analyzing the distribution of teams across tiers for each community to identify different tiering strategies (e.g., 'Bell Curve' vs. 'Top Heavy').")
+
+    # Filters (Local to this page)
+    st.sidebar.header("Experiment Settings")
+    
+    # Season (Single)
+    all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
+    exp_season = st.sidebar.selectbox("Select Season", all_seasons, index=0)
+    
+    # Age Category (Single)
+    age_cats = sorted(df['Age Category'].unique().tolist())
+    default_age = 'U11' if 'U11' in age_cats else age_cats[0]
+    exp_age = st.sidebar.selectbox("Select Age Category", age_cats, index=age_cats.index(default_age) if default_age in age_cats else 0)
+    
+    # Season Type
+    types = df['Type'].unique().tolist()
+    default_type = 'Seeding' if 'Seeding' in types else types[0]
+    exp_type = st.sidebar.selectbox("Season Type", types, index=types.index(default_type) if default_type in types else 0)
+
+    # Communities (Multi)
+    # Filter communities that actually have data for this selection
+    available_communities = df[
+        (df['Season'] == exp_season) & 
+        (df['Age Category'] == exp_age) & 
+        (df['Type'] == exp_type)
+    ]['Community'].unique().tolist()
+    
+    # Default to some interesting ones
+    default_comms = [c for c in ['Bow Valley', 'Southwest', 'Springbank', 'Trails West'] if c in available_communities]
+    exp_communities = st.sidebar.multiselect("Select Communities", sorted(available_communities), default=default_comms)
+    
+    if not exp_communities:
+        st.warning("Please select at least one community.")
+        st.stop()
+
+    # Data Processing
+    exp_df = df[
+        (df['Season'] == exp_season) & 
+        (df['Age Category'] == exp_age) & 
+        (df['Type'] == exp_type) & 
+        (df['Community'].isin(exp_communities))
+    ].copy()
+    
+    # Parse Tiers
+    def get_tier(league_name):
+        parsed = parse_tier_info(league_name)
+        return parsed.get('tier', None)
+        
+    exp_df['Tier'] = exp_df['League'].apply(get_tier)
+    exp_df = exp_df.dropna(subset=['Tier']) # Remove non-tiered leagues if any
+    
+    # Visualization
+    import plotly.graph_objects as go
+    fig = go.Figure()
+    
+    # Determine X range based on data
+    min_tier = exp_df['Tier'].min()
+    max_tier = exp_df['Tier'].max()
+    x_range = np.linspace(max(0, min_tier - 1), max_tier + 1, 100)
+    
+    for comm in exp_communities:
+        comm_data = exp_df[exp_df['Community'] == comm]
+        tiers = comm_data['Tier'].values
+        
+        if len(tiers) < 2:
+            # Just plot a line at the tier
+            fig.add_trace(go.Scatter(
+                x=[tiers[0], tiers[0]],
+                y=[0, 1],
+                mode='lines',
+                name=f"{comm} (1 Team)",
+                line=dict(width=4)
+            ))
+            continue 
+            
+        mu, std = np.mean(tiers), np.std(tiers)
+        
+        # If std is 0 (all teams in same tier), we can't plot a bell curve. 
+        if std == 0:
+            std = 0.1 # Artificial width
+            
+        # Calculate PDF
+        pdf = (1 / (std * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((x_range - mu) / std) ** 2)
+        
+        # Add Trace
+        fig.add_trace(go.Scatter(
+            x=x_range, 
+            y=pdf, 
+            mode='lines', 
+            name=f"{comm} (µ={mu:.1f}, σ={std:.1f})",
+            fill='tozeroy',
+            # opacity=0.1 # Opacity is handled in color usually, but fill works
+        ))
+        
+        # Add Rug Plot (Actual Teams)
+        fig.add_trace(go.Scatter(
+            x=tiers,
+            y=[-0.02] * len(tiers), # Slightly below x-axis
+            mode='markers',
+            marker=dict(symbol='line-ns-open', size=10, color='black'),
+            name=f"{comm} Teams",
+            showlegend=False,
+            hoverinfo='x+text',
+            text=[f"{comm} Team" for _ in tiers]
+        ))
+
+    fig.update_layout(
+        title=f"Tier Distribution: {exp_season} {exp_age} ({exp_type})",
+        xaxis_title="Tier Number (1 = Highest Level)",
+        yaxis_title="Density",
+        xaxis=dict(
+            tickmode='linear',
+            tick0=1,
+            dtick=1
+        )
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Show Data
+    st.subheader("Team List")
+    st.dataframe(exp_df[['Community', 'Team', 'League', 'Tier']].sort_values(['Community', 'Tier']))
+
 
