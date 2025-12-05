@@ -1,0 +1,273 @@
+| Abbeydale | NE/SE | Northeast | 10 | Residential | 1976 | 5925 | 5,700 | 2,023 | 1.7 | 3,480.6 | Very small section falls into the SE |
+| Acadia | SE | South | 11 | Residential | 1960 | 9915 | 10,615 | 5,053 | 3.9 | 2,744.9 |   |
+| Albert Park/Radisson Heights | SE | East | 9 | Residential | 1910 | 6740 | 6,217 | 2,709 | 2.5 | 2,493.6 | Commonly confused with Forest Lawn |
+| Altadore | SW | Centre | 8 | Residential | 1945 | 7290 | 8,907 | 4,486 | 2.9 | 3,143.4 |   |
+| Alpine Park | SW |   | 13 |   |   |   |   |   |   |   |   |
+| Alyth/Bonnybrook | SE | Centre | 9 | Industrial |   | 0 | 17 | 14 | 3.8 | 4.2 |   |
+| Applewood Park | SE/NE | East | 9 | Residential | 1982 | 6830 | 6,404 | 2,215 | 1.6 | 4,061.3 |   |
+| Arbour Lake | NW | Northwest | 2 | Residential | 1992 | 10335 | 10,762 | 3,918 | 4.4 | 2,462.7 | Sometimes referred to as Crowfoot |
+| Aspen Woods | SW | West | 6 | Residential | 2001 | 9435 | 4,469 | 2,281 | 3.8 | 1,387.1 |   |
+| Auburn Bay | SE | Southeast | 12 | Residential | 2005 | 18090 | 5,769 | 2,808 | 4.5 | 1,598.4 |   |
+| Aurora Business Park | NE | North |   | Industrial |   |   | 0 | 0 | 2.4 | 0 |   |
+| Banff Trail | NW | Centre | 7 | Residential | 1952 | 3805 | 3,582 | 1,950 | 1.5 | 2,558 |   |
+| Bankview | SW | Centre | 8 | Residential | 1908 | 5125 | 4,754 | 3,528 | 0.7 | 7,458.6 |   |
+| Bayview | SW | South | 11 | Residential |   | 675 | 648 | 249 | 0.4 | 1,705 |   |
+| Beddington Heights | NW/NE | North | 4 | Residential |   | 11295 | 11,457 | 4,348 | 3.2 | 3,620.3 |   |
+| Bel-Aire | SW | Centre | 11 | Residential | 1960 | 400 | 449 | 159 | 0.3 | 1,413.3 |   |
+| Belmont |   |   | 13 |   |   | 800 |   |   |   |   |   |
+| Beltline | SW/SE | Centre | 8 | Residential |   | 25880 | 19,556 | 14,456 | 2.9 | 6,786.6 | Created as a merger between the neighborhoods of Connaught and Victoria Park |
+| Belvedere | SE | East | 9 |   | 2013 |   |   |   |   |   | Sometimes referred to as East Hills |
+| Bonavista Downs | SE | South |   | Residential | 1973 | 830 | 947 | 370 | 0.5 | 1,850 |   |
+| Bowness | NW | Northwest | 1 | Residential | 1896 | 10770 | 10,700 | 5,313 | 5.6 | 1,966.4 |   |
+| Braeside | SW | South | 11 | Residential | 1965 | 5700 | 5,978 | 2,544 | 2 | 2,970 |   |
+| Brentwood | NW | Northwest | 2 | Residential | 1960 | 7410 | 6,049 | 2,595 | 2.9 | 2,089.3 |   |
+| Bridgeland/Riverside | NE/SE | Centre | 9 | Residential | 1908 | 6350 | 5,254 | 3,274 | 3.1 | 1,804.5 |   |
+| Bridlewood | SW | South | 13 | Residential | 1997 | 12545 | 11,641 | 4,200 | 3.2 | 3,698.4 |   |
+| Britannia | SW | Centre | 8 | Residential | 1956 | 765 | 746 | 309 | 0.5 | 1,606 |   |
+| Burns Industrial | SE | Centre |   | Industrial |   |   | 11 | 2 | 2.9 | 0 |   |
+| Calgary International Airport | NE | Northeast | 5 | Industrial |   |   | 0 | 4 | 20.6 | 0 |   |
+| Cambrian Heights | NW | Centre | 4 | Residential |   | 2000 | 2,039 | 930 | 0.9 | 2,287.8 |   |
+| Canada Olympic Park | SW | West | 6 | Major Park |   |   | 0 | 0 | 0.9 | 0 |   |
+| Canyon Meadows | SW | South |   | Residential | 1965 | 7435 | 7,895 | 3,195 | 3.1 | 2,511.9 |   |
+| Capitol Hill | NW | Centre | 7 | Residential | 1948 | 4670 | 4,003 | 2,291 | 1.4 | 2,867.9 |   |
+| Carrington | NW | North |   | Residential |   | 2750 |   |   |   |   |   |
+| Castleridge | NE | Northeast | 5 | Residential | 1980 | 6130 | 6,098 | 1,954 | 1.2 | 5,080 |   |
+| Cedarbrae | SW | South | 11 | Residential | 1973 | 5935 | 6,264 | 2,609 | 2.1 | 2,970 |   |
+| Chaparral | SE | South |   | Residential | 1995 | 12500 | 11,151 | 3,759 | 5.4 | 2,139.3 |   |
+| Charleswood | NW | Northwest | 4 | Residential | 1959 | 3595 | 3,357 | 1,494 | 1.8 | 1,900.6 |   |
+| Chinatown | SW/SE | Centre | 7 | Residential |   | 2250 | 1,269 | 1,381 | 0.179 | 7,885 |   |
+| Chinook Park | SW | South | 11 | Residential | 1959 | 1535 | 1,703 | 589 | 0.6 | 2,845 |   |
+| Christie Park | SW | West | 6 | Residential | 1993 | 1880 | 2,180 | 728 | 0.8 | 2,745 |   |
+| Citadel | NW | Northwest |   | Residential |   | 10180 | 10,171 | 3,479 | 2.7 | 3,776.7 |   |
+| Cityscape[16] | NE | Northeast | 5 | Residential |   | 5085 |   |   |   |   |   |
+| Cliff Bungalow | SW | Centre | 8 | Residential |   | 1805 | 1,912 | 1,377 | 0.243 | 4,840 |   |
+| Coach Hill | SW | West | 6 | Residential |   | 3275 | 3,194 | 1,480 | 1.1 | 2,980.9 |   |
+| Collingwood | NW | Northwest | 4 | Residential |   | 2290 | 2,231 | 978 | 1.6 | 1,388.8 |   |
+| Copperfield | SE | Southeast |   | Residential |   | 14095 | 7,162 | 3,043 | 4.4 | 1,780.5 |   |
+| Coral Springs | NE | Northeast | 10 | Residential |   | 5610 | 5,838 | 1,508 | 1.8 | 3,260 |   |
+| Cougar Ridge | SW | West | 6 | Residential |   | 7150 | 5,813 | 1,908 | 2.2 | 2,670 |   |
+| Country Hills | NW | North | 3 | Residential |   | 3660 | 3,720 | 1,426 | 1.9 | 1,962.1 |   |
+| Country Hills Village | NE | North | 3 | Residential |   | 2480 | 2,342 | 1,467 | 1 | 2,615 | Sometimes referred to as North Pointe |
+| Coventry Hills | NE | North | 3 | Residential |   | 17350 | 15,722 | 5,322 | 4.1 | 3,894.9 |   |
+| Cranston | SE | Southeast |   | Residential | 2000 | 20850 | 10,831 | 4,625 | 8.3 | 1,428.6 |   |
+| Crescent Heights | NE/NW | Centre | 7 | Residential |   | 6240 | 5,895 | 3,614 | 1.6 | 3,919.4 |   |
+| Crestmont | SW | West |   | Residential |   | 2275 | 1,430 | 462 | 0.6 | 2,423.3 |   |
+| Currie | SW | West |   | Residential |   | 1275 | 24 | 76 | 1.1 | 156.4 |   |
+| Dalhousie | NW | Northwest | 4 | Residential |   | 8530 | 8,917 | 3,739 | 3.3 | 2,753 |   |
+| Deer Ridge | SE | South |   | Residential |   | 3795 | 3,991 | 1,501 | 1.4 | 2,917.1 |   |
+| Deer Run | SE | South |   | Residential |   | 4910 | 5,390 | 2,113 | 1.9 | 2,811.1 |   |
+| Deerfoot Business Centre | NE | Northeast |   | Industrial |   |   | 0 | 0 | 2 | 0 |   |
+| Diamond Cove | SE | South |   | Residential |   | 625 | 716 | 271 | 0.5 | 1,398 |   |
+| Discovery Ridge | SW | West | 6 | Residential |   | 4330 | 4,321 | 1,649 | 3.6 | 1,208.3 |   |
+| Douglasdale/Glen | SE | Southeast |   | Residential |   | 12920 | 11,768 | 4,217 | 6.4 | 1,857.8 |   |
+| Dover | SE | East |   | Residential |   | 10795 | 10,302 | 4,722 | 4.2 | 2,493.8 |   |
+| Downtown Commercial Core | SW/SE | Centre |   | Residential |   | 8225 | 8,071 | 5,121 | 1.3 | 6,165.4 |   |
+| Downtown East Village | SE | Centre |   | Residential |   | 3140 | 2,747 | 1,230 | 0.5 | 5,564 | Sometimes referred to as the East Village |
+| Downtown West End | SW | Centre |   | Residential |   | 2825 | 2,483 | 1,628 | 0.4 | 5,805 |   |
+| Eagle Ridge | SW | South | 11 | Residential |   | 260 | 443 | 110 | 0.4 | 1,037.5 |   |
+| East Fairview Industrial | SE | South |   | Industrial |   |   | 0 | 1 | 2.3 | 0 |   |
+| East Shepard Industrial | SE | Southeast |   | Industrial |   |   | 0 | 0 | 17.4 | 0 |   |
+| Eastfield | SE | East |   | Industrial |   |   | 0 | 0 | 1.1 | 0 |   |
+| Eau Claire | SW | Centre | 7 | Residential | 1885 | 1875 | 1,711 | 1,328 | 0.5 | 3,702 |   |
+| Edgemont | NW | Northwest | 4 | Residential |   | 15225 | 16,082 | 5,421 | 6.6 | 2,408.8 |   |
+| Elbow Park | SW | Centre | 8 | Residential |   | 3285 | 3,408 | 1,221 | 1.8 | 1,876.1 |   |
+| Elboya | SW | Centre | 8 | Residential |   | 1835 | 1,747 | 783 | 0.7 | 2,445.7 |   |
+| Erin Woods | SE | East |   | Residential |   | 6790 | 6,794 | 2,453 | 1.6 | 4,313.1 |   |
+| Erlton | SW/SE | Centre |   | Residential |   | 1280 | 1,231 | 742 | 0.5 | 2,468 |   |
+| Evanston | NW | North |   | Residential |   | 18710 | 5,889 | 2,576 | 4.9 | 1,345.7 |   |
+| Evergreen | SW | South |   | Residential |   | 20780 | 19,487 | 6,961 | 4.6 | 4,371.7 |   |
+| Fairview | SE | South |   | Residential |   | 3675 | 3,552 | 1,606 | 1.3 | 2,786.9 |   |
+| Fairview Industrial | SE | South |   | Industrial |   |   | 0 | 2 | 1.3 | 0 |   |
+| Falconridge | NE | Northeast | 5 | Residential |   | 10325 | 10,043 | 3,478 | 2.2 | 4,718.6 |   |
+| Fish Creek Park | SE/SW | South | 12/13/14 | Major Park |   | 430 | 0 | 0 | 15.6 | 0 |   |
+| Foothills Industrial | SE | East |   | Industrial |   |   | 326 | 2 | 7.6 | 39.2 |   |
+| Forest Heights | SE | East | 9 | Residential |   | 5985 | 6,185 | 2,221 | 1.5 | 4,141.3 | Commonly confused with Forest Lawn |
+| Forest Lawn | SE | East | 9 | Residential |   | 7230 | 7,313 | 3,352 | 2.3 | 3,255.2 |   |
+| Forest Lawn Industrial | SE | East | 9 | Industrial |   |   | 120 | 63 | 1.5 | 86.7 | Sometimes referred to as Hubalta |
+| Franklin | NE/SE | Northeast | 10 | Industrial |   |   | 0 | 3 | 1.5 | 0 |   |
+| Garrison Green | SW | West | 11 | Residential |   | 1680 | 6,242 | 2,988 | 2 | 3,188 | Formerly a part of Lincoln Park |
+| Garrison Woods | SW | West | 8 |   |   | 2860 |   |   |   |   | Formerly a part of Altadore |
+| Glacier Ridge | NW |   |   |   |   |   |   |   |   |   |   |
+| Glamorgan | SW | West | 6 | Residential |   | 6575 | 6,242 | 2,988 | 2 | 3,188 |   |
+| Glenbrook | SW | West | 6 | Residential |   | 7240 | 6,893 | 3,247 | 1.9 | 3,713.7 |   |
+| Glendale | SW | West | 6 | Residential |   | 2715 | 2,730 | 1,111 | 1.4 | 1,963.6 |   |
+| Glendeer Business Park | SE | South |   | Industrial |   |   | 0 | 0 | 0.3 | 0 |   |
+| Glenmore Park | SW | West |   | Major Park |   |   | 0 | 3 | 10.2 | 0 |   |
+| Golden Triangle | SE | East |   | Industrial |   |   | 0 | 1 | 0.5 | 0 |   |
+| Great Plains | SE | East |   | Industrial |   |   | 0 | 0 | 4.3 | 0 |   |
+| Greenview | NE | North |   | Residential |   | 2100 | 1,956 | 1,120 | 0.5 | 3,950 |   |
+| Greenview Industrial Park | NE | North |   | Industrial |   |   | 0 | 5 | 2.1 | 0 |   |
+| Greenwood/Greenbriar | NW | Northwest |   | Residential |   |   | 932 | 501 | 1.2 | 788.3 |   |
+| Hamptons | NW | Northwest |   | Residential |   | 7360 | 7,843 | 2,471 | 3.5 | 2,258.6 |   |
+| Harvest Hills | NE | North | 3 | Residential |   | 7805 | 7,485 | 2,569 | 2.2 | 3,364.5 |   |
+| Hawkwood | NW | Northwest |   | Residential |   | 9115 | 9,898 | 3,331 | 3.2 | 3,072.2 |   |
+| Haysboro | SW | South | 11 | Residential |   | 6960 | 6,724 | 3,637 | 2.7 | 2,571.5 |   |
+| Hidden Valley | NW | North |   | Residential |   | 11540 | 11,657 | 3,867 | 4.3 | 2,744 |   |
+| Highfield | SE | Centre | 9 | Industrial |   |   | 0 | 0 | 2.7 | 0 |   |
+| Highland Park | NW/NE | Centre |   | Residential |   | 4105 | 3,539 | 2,123 | 1.4 | 2,708.6 |   |
+| Highwood | NW | Centre |   | Residential |   | 2205 | 2,098 | 993 | 0.9 | 2,460 |   |
+| Hillhurst | NW | Centre |   | Residential |   | 5475 | 5,914 | 3,557 | 2.1 | 2,995.7 |   |
+| Horizon | NE | Northeast | 10 | Industrial |   |   | 74 | 4 | 2.3 | 13.5 | Commonly referred to as Whitehorn |
+| Hotchkiss[17] | SE | Northeast |   | Residential |   |   |   |   |   |   |   |
+| Hounsfield Heights/Briar Hill | NW | Centre |   | Residential |   | 2470 | 2,927 | 1,109 | 1.2 | 2,461.7 | Sometimes referred to as North Hill |
+| Huntington Hills | NW/NE | North |   | Residential |   | 13120 | 13,279 | 5,580 | 4.8 | 2,752.7 |   |
+| Huxley |   |   | 9 |   |   |   |   |   |   |   |   |
+| Inglewood | SE | Centre |   | Residential |   | 4130 | 3,473 | 2,241 | 2.5 | 1,425.6 |   |
+| Kelvin Grove | SW | South |   | Residential |   | 1805 | 2,334 | 903 | 0.8 | 2,928.8 |   |
+| Keystone Hills |   |   | 3 |   |   |   |   |   |   |   |   |
+| Killarney/Glengarry | SW | Centre |   | Residential |   | 7920 | 6,543 | 3,679 | 1.8 | 3,786.7 |   |
+| Kincora | NW | North |   | Residential |   | 7030 | 4,625 | 1,548 | 2.3 | 2,120 |   |
+| Kingsland | SW | South |   | Residential |   | 4900 | 4,418 | 2,383 | 1.3 | 3,471.5 |   |
+| Lake Bonavista | SE | South |   | Residential |   | 10145 | 10,610 | 4,106 | 5.2 | 2,014.4 |   |
+| Lakeview | SW | West |   | Residential |   | 5640 | 5,501 | 2,338 | 2.2 | 2,485.5 |   |
+| Legacy | SE | South |   | Residential |   | 8000 | 11 | 0 | 6.1 | 0 |   |
+| Lincoln Park | SW | West |   | Residential |   | 1590 | 2,501 | 1,413 | 1.5 | 1,670 |   |
+| Lower Mount Royal | SW | Centre |   | Residential |   | 2990 | 2,981 | 2,266 | 0.3 | 10,600 |   |
+| MacEwan Glen | NW | North |   | Residential |   | 4740 | 5,138 | 1,781 | 1.4 | 3,642.9 |   |
+| Mahogany | SE | Southeast |   | Residential |   | 13860 | 788 | 572 | 6.4 | 197.8 |   |
+| Manchester | SE/SW | Centre |   | Residential |   | 950 | 669 | 448 | 0.5 | 1,236 |   |
+| Manchester Industrial | SE/SW | Centre |   | Industrial |   | 0 | 0 | 3 | 4.6 | 0 | Not to be confused with Manchester |
+| Maple Ridge | SE | South |   | Residential |   | 1830 | 1,978 | 811 | 2.8 | 682.1 |   |
+| Marlborough | NE | Northeast | 10 | Residential |   | 8910 | 8,310 | 3,123 | 2.7 | 3,123.7 |   |
+| Marlborough Park | NE | Northeast | 10 | Residential |   | 8290 | 8,278 | 3,050 | 2.5 | 3,356.4 |   |
+| Martindale | NE | Northeast | 5 | Residential |   | 14540 | 12,987 | 3,912 | 2.7 | 5,064.4 |   |
+| Mayfair | SW | Centre |   | Residential |   | 410 | 470 | 156 | 0.3 | 1,603.3 |   |
+| Mayland | SE/NE | Northeast | 10 | Industrial |   | 0 | 0 | 1 | 1.2 | 0 |   |
+| Mayland Heights | NE | Northeast | 10 | Residential |   | 5925 | 5,835 | 2,787 | 2 | 2,916.5 |   |
+| McCall | NE | Northeast | 10 | Industrial |   | 0 | 0 | 0 | 2.4 | 0 |   |
+| McKenzie Lake | SE | Southeast |   | Residential |   | 13290 | 14,062 | 4,653 | 5.1 | 2,754.9 |   |
+| McKenzie Towne | SE | Southeast |   | Residential |   | 17505 | 15,395 | 6,783 | 4.8 | 3,354.6 |   |
+| Meadowlark Park | SW | Centre |   | Residential |   | 610 | 605 | 277 | 0.6 | 1,038.3 |   |
+| Meridian | NE/SE | Northeast | 10 | Industrial |   | 0 | 0 | 0 | 1.4 | 0 |   |
+| Midnapore | SE | South |   | Residential |   | 6480 | 6,888 | 2,726 | 2.9 | 2,365.9 |   |
+| Millrise | SW/SE | South |   | Residential |   | 6655 | 6,717 | 2,635 | 1.8 | 3,828.9 |   |
+| Mission | SW/SE | Centre |   | Residential |   | 4505 | 4,363 | 3,177 | 0.5 | 8,650 |   |
+| Monterey Park | NE | Northeast | 10 | Residential |   | 10475 | 10,460 | 3,164 | 3.4 | 3,079.4 |   |
+| Mount Pleasant | NW | Centre |   | Residential |   | 6325 | 4,718 | 2,654 | 1.9 | 2,553.2 |   |
+| Montgomery | NW | Northwest | 7 | Residential | *1956(1911) | 4175 | 3,686 | 1,839 | 3 | 1,286.7 |   |
+| New Brighton | SE | Southeast |   | Residential |   | 12885 | 7,314 | 3,247 | 2.9 | 2,863.1 |   |
+| Nolan Hill | NW | North |   | Residential |   | 8755 | 0 | 23 | 2.1 | 0 |   |
+| North Airways | NE | Northeast | 10 | Industrial |   | 0 | 20 | 3 | 1.2 | 0 |   |
+| North Glenmore Park | SW | West |   | Residential |   | 2435 | 2,388 | 1,020 | 1.2 | 1,988.3 |   |
+| North Haven | NW | North | 5 | Residential |   | 2365 | 2,282 | 988 | 0.8 | 2,860 |   |
+| North Haven Upper | NW | North | 4 | Residential |   | 640 | 615 | 246 | 0.229 | 2,073.3 |   |
+| Nose Hill Park | NW | Northwest | 4 | Major Park |   | 0 | 0 | 0 | 11.6 | 0 |   |
+| Oakridge | SW | South |   | Residential |   | 5620 | 5,719 | 2,291 | 2.4 | 2,354.6 |   |
+| Ogden | SE | Southeast |   | Residential |   | 8315 | 8,432 | 3,879 | 4.1 | 2,122.4 |   |
+| Ogden Shops | SE | East |   | Industrial |   | 0 | 0 | 0 | 2.2 | 0 |   |
+| Osprey Hill |   |   | 1 |   |   |   |   |   |   |   |   |
+| Palliser | SW | South |   | Residential |   | 3285 | 3,301 | 1,707 | 1 | 3,293 |   |
+| Panorama Hills | NW | North | 3 | Residential |   | 25535 | 19,851 | 7,398 | 6.3 | 3,531.3 |   |
+| Parkdale | NW | Centre |   | Residential |   | 2300 | 2,317 | 1,020 | 1.1 | 2,087.3 |   |
+| Parkhill | SW | Centre |   | Residential |   | 1770 | 1,623 | 849 | 0.7 | 2,274.3 |   |
+| Parkland | SE | South |   | Residential |   | 3430 | 3,772 | 1,448 | 1.8 | 2,102.8 |   |
+| Patterson | SW | West |   | Residential |   | 4145 | 4,162 | 2,008 | 2 | 2,140.5 |   |
+| Pegasus | NE | Northeast | 5 | Industrial |   | 0 | 0 | 2 | 0.3 | 0 |   |
+| Penbrooke Meadows | SE | East |   | Residential |   | 8235 | 8,188 | 3,212 | 2 | 4,273.5 | Commonly confused with Forest Lawn |
+| Pine Creek |   |   |   |   |   | 245 |   |   |   |   | Commonly referred as Creekside |
+| Pineridge | NE | Northeast | 10 | Residential | 1974 | 9850 | 9,626 | 3,799 | 2.6 | 3,709.2 |   |
+| Point Mckay | NW | Centre |   | Residential |   | 1330 | 1,318 | 846 | 0.4 | 3,295 |   |
+| Pump Hill | SW | South |   | Residential |   | 1455 | 1,655 | 563 | 0.9 | 1,793.3 |   |
+| Queens Park Village | NW | Centre |   | Residential |   | 375 | 400 | 188 | 0.6 | 691.7 |   |
+| Queensland | SE | South |   | Residential |   | 4585 | 4,877 | 1,894 | 1.6 | 2,981.9 |   |
+| Ramsay | SE | Centre |   | Residential |   | 2155 | 2,006 | 1,132 | 1 | 2,110 |   |
+| Ranchlands | NW | Northwest |   | Residential |   | 7490 | 7,529 | 3,051 | 2.3 | 3,315.7 |   |
+| Rangeview | SE |   |   |   |   |   |   |   |   |   |   |
+| Red Carpet | SE | East | 9 | Residential |   | 1745 | 1,630 | 917 | 0.6 | 2,591.7 |   |
+| Redstone | NE | Northeast | 5 | Residential |   | 9050 | 0 | 0 | 1.9 | 0 |   |
+| Renfrew | NE | Centre |   | Residential |   | 6580 | 5,669 | 3,231 | 2.7 | 2,165.2 |   |
+| Residual Ward 1 | NW/SW | West/ Northwest |   | Residual Area |   |   | 343 | 110 | n/a | — |   |
+| Residual Ward 2 | NW | North/ Northwest |   | Residual Area |   |   | 1,140 | 25 | n/a | — |   |
+| Residual Ward 3 | NE/NW | North/ Northeast |   | Residual Area |   |   | 109 | 31 | n/a | — |   |
+| Residual Ward 4 |   |   |   | Residual Area |   |   | 4 | 0 | n/a | — |   |
+| Residual Ward 5 | NE | Northeast |   | Residual Area |   |   | 28 | 11 | n/a | — |   |
+| Residual Ward 6 | SW | West |   | Residual Area |   |   | 36 | 13 | n/a | — |   |
+| Residual Ward 7 |   |   |   | Residual Area |   |   | 0 | 0 | n/a | — |   |
+| Residual Ward 8 |   |   |   | Residual Area |   |   | 0 | 0 | n/a | — |   |
+| Residual Ward 9 | SE | East/ Southeast |   | Residual Area |   |   | 40 | 7 | n/a | — |   |
+| Residual Ward 10 | SE/NE | East |   | Residual Area |   |   | 827 | 378 | n/a | — |   |
+| Residual Ward 11 |   |   |   | Residual Area |   |   | 6 | 0 | n/a | — |   |
+| Residual Ward 12 | SE | Southeast |   | Residual Area |   |   | 327 | 135 | n/a | — |   |
+| Residual Ward 13 | SW | South |   | Residual Area |   |   | 60 | 36 | n/a | — |   |
+| Residual Ward 14 | SE/SW | South |   | Residual Area |   |   | 58 | 27 | n/a | — |   |
+| Richmond | SW | Centre |   | Residential |   | 5250 | 4,113 | 2,259 | 1.8 | 2,349.4 |   |
+| Rideau Park | SW | Centre |   | Residential |   | 675 | 627 | 342 | 0.3 | 2,120 |   |
+| Riverbend | SE | Southeast |   | Residential |   | 9205 | 9,749 | 3,449 | 4.1 | 2,362 |   |
+| Rocky Ridge | NW | Northwest |   | Residential |   | 8195 | 7,266 | 2,972 | 2.8 | 2,736.4 |   |
+| Rosedale | NW | Centre |   | Residential |   | 1495 | 1,592 | 636 | 0.7 | 2,241.4 |   |
+| Rosemont | NW | Centre |   | Residential |   | 1155 | 1,208 | 563 | 0.5 | 2,482 |   |
+| Rosscarrock | SW | West |   | Residential |   | 3490 | 3,175 | 1,645 | 1.1 | 3,050.9 | Sometimes referred to as Westbrook |
+| Roxboro | SW | Centre |   | Residential |   | 415 | 441 | 161 | 0.231 | 1,403.3 |   |
+| Royal Oak | NW | Northwest |   | Residential |   | 11580 | 10,979 | 3,940 | 3.6 | 3,125.6 |   |
+| Royal Vista | NW | Northwest |   | Industrial |   | 0 | 0 | 0 | 1.3 | 0 |   |
+| Rundle | NE | Northeast | 10 | Residential | 1973 | 10545 | 11,029 | 3,836 | 2.6 | 4,330 |   |
+| Rutland Park | SW | West |   | Residential |   | 2140 | 2,309 | 972 | 0.7 | 3,181.4 |   |
+| Saddle Ridge | NE | Northeast | 5 | Residential | 1960 | 24365 | 13,388 | 3,668 | 5.5 | 2,613.1 | Sometimes referred to as Saddletowne |
+| Saddle Ridge Industrial | NE | Northeast | 5 | Industrial |   | 0 | 60 | 24 | 2.5 | 14 |   |
+| Sage Hill | NW | North |   | Residential |   | 9345 | 1,425 | 992 | 3.8 | 576.1 |   |
+| Sandstone Valley | NW | North |   | Residential |   | 5795 | 6,142 | 2,120 | 1.8 | 3,473.9 |   |
+| Scarboro | SW | Centre |   | Residential |   | 1010 | 870 | 343 | 0.5 | 1,760 |   |
+| Scarboro/Sunalta West | SW | Centre |   | Residential |   | 465 | 397 | 165 | 0.4 | 1,025 |   |
+| Scenic Acres | NW | Northwest |   | Residential |   | 7850 | 8,710 | 2,921 | 4.3 | 2,011.6 |   |
+| Section 23 | SE | Southeast |   | Industrial |   |   | 0 | 1 | 3.1 | 0 |   |
+| Seton | SE | Southeast |   | Residential |   | 3590 | 0 | 0 | 1.7 | 0 |   |
+| Shaganappi | SW | Centre |   | Residential |   | 1765 | 1,459 | 862 | 1.5 | 1,035.3 |   |
+| Shawnee Slopes | SW | South |   | Residential |   | 2020 | 1,529 | 866 | 1.2 | 1,304.2 |   |
+| Shawnessy | SW/SE | South |   | Residential | 1981 | 9055 | 9,315 | 3,300 | 3.7 | 2,536.5 |   |
+| Shepard Industrial | SE | Southeast |   | Residential |   | 265 | 250 | 151 | 4.2 | 59.8 | Sometimes referred to as just Shepard or South Hill |
+| Sherwood | NW | North |   | Residential |   | 6520 | 2,109 | 979 | 2.4 | 1,051.3 |   |
+| Signal Hill | SW | West |   | Residential |   | 13000 | 13,795 | 5,253 | 5.6 | 2,484.6 |   |
+| Silver Springs | NW | Northwest |   | Residential |   | 8570 | 8,910 | 3,533 | 5 | 1,786.6 |   |
+| Silverado | SW/SE | South |   | Residential |   | 7975 | 4,337 | 1,898 | 5.1 | 1,007.1 |   |
+| Skyline East | NE | Northeast |   | Industrial |   | 0 | 0 | 0 | 0.6 | 0 |   |
+| Skyline West | NE | North |   | Industrial |   | 0 | 0 | 0 | 0.8 | 0 |   |
+| Skyview Ranch | NE | Northeast |   | Residential |   | 12870 | 1,805 | 1,306 | 4.6 | 650 |   |
+| Somerset | SW/SE | South |   | Residential |   | 8320 | 8,401 | 3,136 | 2.3 | 3,713 |   |
+| South Airways | NE | Northeast | 10 | Industrial |   | 0 | 0 | 2 | 1.9 | 0 |   |
+| South Calgary | SW | Centre |   | Residential |   | 4540 | 3,642 | 2,244 | 0.9 | 4,108.9 |   |
+| South Foothills | SE | Southeast |   | Industrial |   | 0 | 0 | 3 | 3.6 | 0 |   |
+| Southview | SE | East |   | Residential |   | 1550 | 2,063 | 936 | 1.6 | 1,187.5 | Commonly confused with Forest Lawn |
+| Southwood | SW | South |   | Residential |   | 6095 | 5,965 | 2,658 | 2.7 | 2,253.7 | Commonly referred to as Southland |
+| Springbank Hill | SW | West |   | Residential |   | 9840 | 8,388 | 3,166 | 6.3 | 1,394.1 |   |
+| Spruce Cliff | SW | West |   | Residential |   | 4195 | 3,992 | 2,344 | 1.1 | 3,895.5 |   |
+| St. Andrews Heights | NW | Centre |   | Residential |   | 1345 | 1,470 | 645 | 1.2 | 1,323.3 |   |
+| Starfield | SE | East |   | Industrial |   | 0 | 0 | 2 | 4.3 | 0 |   |
+| Stonegate Landing | NE | Northeast |   | Industrial |   | 0 | 0 | 0 | 5.4 | 0 |   |
+| Stoney 1 | NE | North |   | Industrial |   | 0 | 0 | 5 | 6.1 | 0 |   |
+| Stoney 2 | NE | Northeast |   | Industrial |   | 0 | 0 | 1 | 4 | 0 |   |
+| Stoney 3 | NE | Northeast |   | Industrial |   | 0 | 0 | 0 | 1.3 | 0 |   |
+| Stoney 4 | NE | Northeast |   | Industrial |   | 0 | 0 | 3 | 5.6 | 0 |   |
+| Strathcona Park | SW | West |   | Residential | 1980 | 6830 | 7,039 | 2,436 | 2.7 | 2,604.8 |   |
+| Sunalta | SW | Centre |   | Residential | 1910 | 3090 | 3,116 | 2,130 | 0.9 | 3,682.2 |   |
+| Sundance | SE | South |   | Residential | 1982 | 9590 | 10,623 | 3,406 | 4 | 2,624.8 |   |
+| Sunnyside | NW | Centre |   | Residential | 1904 | 4000 | 3,751 | 2,340 | 1 | 3,704 |   |
+| Sunridge | NE | Northeast | 10 | Industrial |   | 0 | 40 | 7 | 2.3 | 14.3 |   |
+| Symons Valley Ranch | NW | North |   | Residential |   |   |   |   | 0.137 |   | Smallest neighborhood by land area |
+| Taradale | NE | Northeast | 5 | Residential | 1984 | 17630 | 16,110 | 4,559 | 2.9 | 5,807.2 |   |
+| Temple | NE | Northeast | 10 | Residential | 1977 | 10525 | 10,580 | 3,648 | 2.6 | 4,190 |   |
+| Thorncliffe | NW/NE | North |   | Residential |   | 8695 | 8,640 | 3,858 | 3.3 | 2,634.2 |   |
+| Tuscany | NW | Northwest | 1 | Residential | 1994 | 19700 | 18,838 | 6,492 | 6.9 | 2,755.5 |   |
+| Tuxedo Park | NE/NW | Centre |   | Residential |   | 5165 | 4,430 | 2,686 | 1.3 | 3,516.2 |   |
+| University District | NW | Northwest | 7 | Residential |   | 960 | ? | ? | ? | ? |   |
+| University Heights | NW | Northwest | 7 | Residential |   | 2965 | 2,890 | 1,380 | 0.8 | 3,660 |   |
+| University of Calgary | NW | Northwest | 7 | Residential |   | ? | 2,355 | 927 | 2.7 | 1,009.3 |   |
+| Upper Mount Royal | SW | Centre |   | Residential |   | 2735 | 2,536 | 1,071 | 1.3 | 1,955.4 |   |
+| Valley Ridge | NW | West |   | Residential |   | 5365 | 5,042 | 1,768 | 3.3 | 1,519.1 |   |
+| Valleyfield | SE | East |   | Industrial |   | 0 | 0 | 6 | 1.2 | 0 |   |
+| Varsity | NW | Northwest |   | Residential |   | 12040 | 12,021 | 5,547 | 6.8 | 1,794.1 |   |
+| Vermilion Hills |   |   |   |   |   |   |   |   |   |   |   |
+| Vista Heights | NE | Northeast |   | Residential |   | 2300 | 2,274 | 844 | 1.1 | 2,003.6 |   |
+| Walden | SE | South |   | Residential |   | 7650 | 594 | 450 | 2.4 | 389.6 |   |
+| West Hillhurst | NW | Centre |   | Residential |   | 6635 | 5,757 | 2,947 | 2.4 | 2,417.5 |   |
+| West Springs | SW | West |   | Residential |   | 11560 | 7,849 | 2,795 | 4.1 | 2,006.8 |   |
+| Westgate | SW | West |   | Residential |   | 3225 | 3,101 | 1,334 | 1.2 | 2,643.3 |   |
+| Westwinds | NE | Northeast | 5 | Industrial |   | 0 | 0 | 0 | 2 | 0 |   |
+| Whitehorn | NE | Northeast | 10 | Residential |   | 11085 | 11,541 | 3,869 | 2.6 | 4,558.5 |   |
+| Wildwood | SW | West |   | Residential | 1956 | 2765 | 2,582 | 1,056 | 2.6 | 999.2 |   |
+| Willow Park | SE | South |   | Residential |   | 5050 | 5,308 | 2,282 | 3.4 | 1,537.9 |   |
+| Windsor Park | SW | Centre |   | Residential |   | 4410 | 3,858 | 2,421 | 1.3 | 3,173.8 |   |
+| Winston Heights/Mountview | NE | Centre |   | Residential |   | 3605 | 3,760 | 1,883 | 3 | 1,297 |   |
+| Wolf Willow | SE | South |   | Residential |   | 525 |   |   |   |   |   |
+| Woodbine | SW | South |   | Residential | 1980 | 8745 | 9,086 | 3,371 | 3.2 | 2,853.4 |   |
+| Woodlands | SW | South |   | Residential | 1976 | 5830 | 6,201 | 2,397 | 2.8 | 2,214.6 |   |
+| Yorkville | SW | South | 13 | Residential |   | 715 |   |   |   | ? |   |

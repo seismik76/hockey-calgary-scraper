@@ -761,6 +761,15 @@ if page == "Experiments":
         st.warning("Please select at least one community.")
         st.stop()
 
+    # Metric Selector
+    metric_map = {
+        'Points %': 'Points %',
+        'Win %': 'Win %',
+        'Goal Diff/Game': 'Goal Diff/Game'
+    }
+    selected_metric_label = st.sidebar.selectbox("Select Performance Metric", list(metric_map.keys()))
+    selected_metric = metric_map[selected_metric_label]
+
     # Data Processing
     exp_df = df[
         (df['Season'] == exp_season) & 
@@ -857,5 +866,110 @@ if page == "Experiments":
     # Show Data
     st.subheader("Team List")
     st.dataframe(exp_df[['Community', 'Team', 'League', 'Tier']].sort_values(['Community', 'Tier']))
+
+    # --- NEW EXPERIMENT: Income vs Performance ---
+    st.markdown("---")
+    st.subheader("💰 Income vs. Performance Analysis")
+    st.markdown("Exploring the relationship between **Average Household Income** (estimated from 2021 Census data) and **Community Performance**.")
+    
+    import json
+    import os
+    
+    # Load Reference Data
+    try:
+        with open('data/reference/association_neighborhoods.json', 'r') as f:
+            assoc_map = json.load(f)
+        with open('data/reference/neighborhood_incomes.json', 'r') as f:
+            income_map = json.load(f)
+            
+        # Calculate Average Income per Association
+        assoc_incomes = {}
+        for assoc, neighborhoods in assoc_map.items():
+            total_income = 0
+            count = 0
+            for hood in neighborhoods:
+                if hood in income_map:
+                    total_income += income_map[hood]
+                    count += 1
+            
+            if count > 0:
+                assoc_incomes[assoc] = total_income / count
+        
+        # Prepare Data for Plotting
+        # We use the 'overall_stats' from the main data load, but we need to re-aggregate it by Community
+        # to get a single performance metric per community (averaged across all selected seasons/ages)
+        
+        # Filter main df for the experiment selections
+        income_perf_df = df[
+            (df['Season'] == exp_season) & 
+            (df['Age Category'] == exp_age) & 
+            (df['Type'] == exp_type)
+        ].groupby('Community')[selected_metric].mean().reset_index()
+        
+        income_perf_df.rename(columns={selected_metric: 'Performance'}, inplace=True)
+        
+        # Map Income
+        income_perf_df['Avg_Income'] = income_perf_df['Community'].map(assoc_incomes)
+        
+        # Filter out communities with no income data
+        plot_df = income_perf_df.dropna(subset=['Avg_Income'])
+        
+        if plot_df.empty:
+            st.warning("Not enough income data available for the selected communities to generate a plot.")
+        else:
+            fig_income = px.scatter(
+                plot_df,
+                x='Avg_Income',
+                y='Performance',
+                color='Community',
+                text='Community',
+                title=f"Performance vs. Est. Household Income ({exp_season} {exp_age})",
+                labels={
+                    'Avg_Income': 'Est. Avg Household Income ($)',
+                    'Performance': f"Avg {selected_metric_label}"
+                },
+                hover_data=['Performance', 'Avg_Income']
+            )
+            
+            fig_income.update_traces(textposition='top center')
+            # Add trendline if enough points
+            if len(plot_df) > 2:
+                fig_income.add_traces(
+                    px.scatter(plot_df, x='Avg_Income', y='Performance', trendline="ols").data[1]
+                )
+            
+            st.plotly_chart(fig_income, use_container_width=True)
+            
+            st.caption("⚠️ **Note:** Income data is based on a limited sample of neighborhoods per association from 2021 Census data. This is an approximation.")
+            
+            with st.expander("View Underlying Data"):
+                st.markdown("#### Aggregated Data")
+                st.dataframe(plot_df)
+                
+                st.markdown("#### Neighborhood Breakdown")
+                breakdown_data = []
+                # Only show breakdown for communities currently in the plot
+                for comm in plot_df['Community'].unique():
+                    # Check if we have mapping for this community
+                    if comm in assoc_map:
+                        neighborhoods = assoc_map[comm]
+                        for hood in neighborhoods:
+                            # Only include if we have income data for the neighborhood
+                            if hood in income_map:
+                                breakdown_data.append({
+                                    "Community": comm,
+                                    "Neighborhood": hood,
+                                    "Household Income (2021)": income_map[hood]
+                                })
+                
+                if breakdown_data:
+                    breakdown_df = pd.DataFrame(breakdown_data)
+                    st.dataframe(breakdown_df.sort_values(['Community', 'Neighborhood']))
+                else:
+                    st.info("No detailed neighborhood income data available.")
+                
+    except FileNotFoundError:
+        st.error("Reference data files not found. Please ensure 'data/reference/association_neighborhoods.json' and 'neighborhood_incomes.json' exist.")
+
 
 
