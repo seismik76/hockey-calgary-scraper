@@ -51,15 +51,15 @@ def load_data():
     JOIN leagues l ON st.league_id = l.id
     JOIN teams t ON st.team_id = t.id
     JOIN communities c ON t.community_id = c.id
-    WHERE st.gp > 0
     """
     try:
         df = pd.read_sql(query, engine)
         
         # Feature Engineering
-        df['Win %'] = df['W'] / df['GP']
-        df['Points %'] = df['PTS'] / (df['GP'] * 2)
-        df['Goal Diff/Game'] = df['Diff'] / df['GP']
+        # Handle division by zero for teams with 0 GP
+        df['Win %'] = df.apply(lambda row: row['W'] / row['GP'] if row['GP'] > 0 else 0.0, axis=1)
+        df['Points %'] = df.apply(lambda row: row['PTS'] / (row['GP'] * 2) if row['GP'] > 0 else 0.0, axis=1)
+        df['Goal Diff/Game'] = df.apply(lambda row: row['Diff'] / row['GP'] if row['GP'] > 0 else 0.0, axis=1)
         
         # Extract Age Category (U9, U11, etc.) from League Name
         def get_age_category(league_name):
@@ -426,7 +426,9 @@ elif page == "Tier 1 Dilution Analysis":
     tier1_counts.rename(columns={'Team': 'Tier1_Count'}, inplace=True)
     
     # 5. Calculate OVERALL Performance per Community/Season/Age
-    overall_stats = non_elite_df.groupby(['Season', 'Community', 'Age Category'])[selected_metric].mean().reset_index()
+    # Only consider teams that have played games for performance stats to avoid skewing the average with 0-game teams
+    performance_df = non_elite_df[non_elite_df['GP'] > 0]
+    overall_stats = performance_df.groupby(['Season', 'Community', 'Age Category'])[selected_metric].mean().reset_index()
     overall_stats.rename(columns={selected_metric: 'Overall_Performance'}, inplace=True)
     
     # 6. Merge Data
