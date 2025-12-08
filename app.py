@@ -871,25 +871,42 @@ if page == "Experiments":
     # --- NEW EXPERIMENT: Income vs Performance ---
     st.markdown("---")
     st.subheader("💰 Income vs. Performance Analysis")
+    st.caption("v2.1 - Path Debugging Active")
     st.markdown("Exploring the relationship between **Average Household Income** (estimated from 2021 Census data) and **Community Performance**.")
     
     import json
     import os
     import statistics
     
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    st.sidebar.markdown(f"**Debug Info**\n\nBase: `{BASE_DIR}`")
+    
+    ASSOC_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'association_neighborhoods.json')
+    INCOME_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'neighborhood_incomes.json')
+    DEMO_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'neighborhood_demographics.json')
+
     # Load Reference Data
     try:
-        with open('data/reference/association_neighborhoods.json', 'r') as f:
+        if not os.path.exists(ASSOC_FILE):
+            st.error(f"CRITICAL ERROR: Association file not found at: {ASSOC_FILE}")
+            st.write(f"Current Working Directory: {os.getcwd()}")
+            st.write(f"Script Location: {__file__}")
+            st.write(f"Calculated Base Dir: {BASE_DIR}")
+            
+        with open(ASSOC_FILE, 'r') as f:
             assoc_map = json.load(f)
         
         # Load Legacy/Manual Income Data
-        with open('data/reference/neighborhood_incomes.json', 'r') as f:
+        if not os.path.exists(INCOME_FILE):
+             st.error(f"CRITICAL ERROR: Income file not found at: {INCOME_FILE}")
+
+        with open(INCOME_FILE, 'r') as f:
             income_map = json.load(f)
             
         # Load Scraped Demographics Data (if available)
         demo_map = {}
-        if os.path.exists('data/reference/neighborhood_demographics.json'):
-            with open('data/reference/neighborhood_demographics.json', 'r') as f:
+        if os.path.exists(DEMO_FILE):
+            with open(DEMO_FILE, 'r') as f:
                 demo_map = json.load(f)
             
         # Calculate Average Income per Association
@@ -1068,8 +1085,11 @@ if page == "Experiments":
                 else:
                     st.info("No detailed neighborhood income data available.")
                 
-    except FileNotFoundError:
-        st.error("Reference data files not found. Please ensure 'data/reference/association_neighborhoods.json' and 'neighborhood_incomes.json' exist.")
+    except Exception as e:
+        st.error(f"❌ DATA LOADING ERROR: {e}")
+        st.warning(f"Failed to load reference files.")
+        st.code(f"Association File: {ASSOC_FILE}\nExists: {os.path.exists(ASSOC_FILE)}")
+        st.code(f"Income File: {INCOME_FILE}\nExists: {os.path.exists(INCOME_FILE)}")
 
 elif page == "Demographics":
     st.title("🏘️ Community Demographics")
@@ -1077,14 +1097,24 @@ elif page == "Demographics":
     
     import os
     
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    ASSOC_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'association_neighborhoods.json')
+    DEMO_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'neighborhood_demographics.json')
+
     # Load Data
     try:
-        with open('data/reference/association_neighborhoods.json', 'r') as f:
+        if not os.path.exists(ASSOC_FILE):
+            st.error(f"CRITICAL ERROR: Association file not found at: {ASSOC_FILE}")
+            st.write(f"Current Working Directory: {os.getcwd()}")
+            st.write(f"Script Location: {__file__}")
+            st.write(f"Calculated Base Dir: {BASE_DIR}")
+
+        with open(ASSOC_FILE, 'r') as f:
             assoc_map = json.load(f)
             
         demo_map = {}
-        if os.path.exists('data/reference/neighborhood_demographics.json'):
-            with open('data/reference/neighborhood_demographics.json', 'r') as f:
+        if os.path.exists(DEMO_FILE):
+            with open(DEMO_FILE, 'r') as f:
                 demo_map = json.load(f)
         
         # Build Table Data

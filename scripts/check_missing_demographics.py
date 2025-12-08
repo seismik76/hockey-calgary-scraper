@@ -2,8 +2,13 @@ import json
 import os
 
 def check_missing():
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ASSOC_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'association_neighborhoods.json')
+    DEMO_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'neighborhood_demographics.json')
+    INCOME_FILE = os.path.join(BASE_DIR, 'data', 'reference', 'neighborhood_incomes.json')
+
     # Load Target Neighborhoods (from Associations)
-    with open('data/reference/association_neighborhoods.json', 'r') as f:
+    with open(ASSOC_FILE, 'r') as f:
         assoc_map = json.load(f)
     
     all_targets = set()
@@ -12,15 +17,15 @@ def check_missing():
             all_targets.add(hood)
             
     # Load Scraped Data
-    if os.path.exists('data/reference/neighborhood_demographics.json'):
-        with open('data/reference/neighborhood_demographics.json', 'r') as f:
+    if os.path.exists(DEMO_FILE):
+        with open(DEMO_FILE, 'r') as f:
             demo_data = json.load(f)
     else:
         demo_data = {}
         
     # Load Legacy Data (for reference)
-    if os.path.exists('data/reference/neighborhood_incomes.json'):
-        with open('data/reference/neighborhood_incomes.json', 'r') as f:
+    if os.path.exists(INCOME_FILE):
+        with open(INCOME_FILE, 'r') as f:
             legacy_data = json.load(f)
     else:
         legacy_data = {}
