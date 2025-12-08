@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import json
 from sqlalchemy import create_engine
 from scraper import sync_data
 from database import init_db
@@ -89,7 +90,7 @@ def load_data():
 st.sidebar.title("🏒 Hockey Calgary Analytics")
 
 # Navigation
-page = st.sidebar.radio("Navigation", ["Analytics", "Tier 1 Dilution Analysis", "Experiments"])
+page = st.sidebar.radio("Navigation", ["Analytics", "Tier 1 Dilution Analysis", "Experiments", "Demographics"])
 
 # Scraper Control
 st.sidebar.header("Data Sync")
@@ -874,26 +875,114 @@ if page == "Experiments":
     
     import json
     import os
+    import statistics
     
     # Load Reference Data
     try:
         with open('data/reference/association_neighborhoods.json', 'r') as f:
             assoc_map = json.load(f)
+        
+        # Load Legacy/Manual Income Data
         with open('data/reference/neighborhood_incomes.json', 'r') as f:
             income_map = json.load(f)
             
+        # Load Scraped Demographics Data (if available)
+        demo_map = {}
+        if os.path.exists('data/reference/neighborhood_demographics.json'):
+            with open('data/reference/neighborhood_demographics.json', 'r') as f:
+                demo_map = json.load(f)
+            
         # Calculate Average Income per Association
         assoc_incomes = {}
+        assoc_details = {} # Store details for breakdown
+        
+        # Manual Exclusions for skew correction (Student Housing, etc.)
+        EXCLUDED_HOODS = [
+            "Lincoln Park", "CFB-Lincoln Park", # Student Housing
+            "University of Calgary", # Student Housing
+            "Chinatown", "Downtown Commercial Core", "Downtown West End", "Eau Claire", # Downtown Core (Low Youth)
+            "Beltline", "Mission", "Lower Mount Royal", "Cliff Bungalow" # High Density / Young Professional (Low Youth)
+        ]
+
         for assoc, neighborhoods in assoc_map.items():
-            total_income = 0
-            count = 0
-            for hood in neighborhoods:
-                if hood in income_map:
-                    total_income += income_map[hood]
-                    count += 1
+            income_values = [] # List of income values for median calculation
+            details = []
+            seen_urls = set() # Track processed URLs to avoid double counting aliased neighborhoods
             
-            if count > 0:
-                assoc_incomes[assoc] = total_income / count
+            for hood in neighborhoods:
+                val = None
+                src = "Unknown"
+                pop = None
+                youth_pop = 0
+                indigenous_pct = None
+                immigrant_pct = None
+                url = None
+                
+                # Priority 1: Scraped Data
+                if hood in demo_map and demo_map[hood].get('median_income'):
+                    val = demo_map[hood]['median_income']
+                    src = "2021 Census (Scraped)"
+                    pop = demo_map[hood].get('population')
+                    url = demo_map[hood].get('url')
+                    
+                    # Calculate Youth Population (0-14)
+                    if demo_map[hood].get('age_gender_breakdown'):
+                        for age_group in demo_map[hood]['age_gender_breakdown']:
+                            if age_group['age_group'] in ['0-4', '5-9', '10-14']:
+                                youth_pop += age_group.get('total', 0)
+                    
+                    # Extract Indigenous %
+                    if demo_map[hood].get('indigenous_identity'):
+                        indigenous_pct = demo_map[hood]['indigenous_identity'].get('percentage')
+                        
+                    # Extract Immigrant %
+                    if demo_map[hood].get('immigrants') and demo_map[hood]['immigrants'].get('Immigrants'):
+                        immigrant_pct = demo_map[hood]['immigrants']['Immigrants'].get('percentage')
+
+                # Priority 2: Manual/Legacy Data
+                # SKIPPED: User requested to exclude neighborhoods without age data
+                
+                if val and youth_pop > 0:
+                    # Ensure numeric types
+                    try:
+                        val = float(val)
+                    except (ValueError, TypeError):
+                        continue
+
+                    # Check for duplicates via URL
+                    is_duplicate = False
+                    if url:
+                        if url in seen_urls:
+                            is_duplicate = True
+                            src += " (Duplicate/Alias)"
+                        else:
+                            seen_urls.add(url)
+                    
+                    # Check for Exclusions
+                    is_excluded = False
+                    if hood in EXCLUDED_HOODS:
+                        is_excluded = True
+                        src += " (Excluded from Aggregation)"
+
+                    if not is_duplicate and not is_excluded:
+                        income_values.append(val)
+                    
+                    details.append({
+                        "Neighborhood": hood,
+                        "Income": val,
+                        "Source": src,
+                        "Population": pop,
+                        "Youth Pop (0-14)": youth_pop,
+                        "Indigenous %": indigenous_pct,
+                        "Immigrant %": immigrant_pct
+                    })
+            
+            if income_values:
+                # Median Calculation (Median of Neighborhood Medians)
+                # This prevents high-density/low-income areas from skewing the association average
+                assoc_incomes[assoc] = statistics.median(income_values)
+
+                assoc_details[assoc] = details
         
         # Prepare Data for Plotting
         # We use the 'overall_stats' from the main data load, but we need to re-aggregate it by Community
@@ -925,7 +1014,7 @@ if page == "Experiments":
                 text='Community',
                 title=f"Performance vs. Est. Household Income ({exp_season} {exp_age})",
                 labels={
-                    'Avg_Income': 'Est. Avg Household Income ($)',
+                    'Avg_Income': 'Median of Neighborhood Median Incomes ($)',
                     'Performance': f"Avg {selected_metric_label}"
                 },
                 hover_data=['Performance', 'Avg_Income']
@@ -934,13 +1023,23 @@ if page == "Experiments":
             fig_income.update_traces(textposition='top center')
             # Add trendline if enough points
             if len(plot_df) > 2:
-                fig_income.add_traces(
-                    px.scatter(plot_df, x='Avg_Income', y='Performance', trendline="ols").data[1]
-                )
+                try:
+                    trend_fig = px.scatter(plot_df, x='Avg_Income', y='Performance', trendline="ols")
+                    fig_income.add_traces(trend_fig.data[1])
+                    
+                    # Extract R-squared
+                    results = px.get_trendline_results(trend_fig)
+                    r_squared = results.px_fit_results.iloc[0].rsquared
+                    
+                    fig_income.update_layout(
+                        title=f"Performance vs. Est. Household Income ({exp_season} {exp_age}) | R² = {r_squared:.3f}"
+                    )
+                except Exception as e:
+                    st.warning(f"Could not calculate trendline/R-squared: {e}")
             
             st.plotly_chart(fig_income, use_container_width=True)
             
-            st.caption("⚠️ **Note:** Income data is based on a limited sample of neighborhoods per association from 2021 Census data. This is an approximation.")
+            st.caption("⚠️ **Note:** Income metric is the **Median of Neighborhood Median Incomes** (2021 Census). Neighborhoods with high student populations (e.g., Lincoln Park) are excluded to better reflect family demographics.")
             
             with st.expander("View Underlying Data"):
                 st.markdown("#### Aggregated Data")
@@ -950,17 +1049,18 @@ if page == "Experiments":
                 breakdown_data = []
                 # Only show breakdown for communities currently in the plot
                 for comm in plot_df['Community'].unique():
-                    # Check if we have mapping for this community
-                    if comm in assoc_map:
-                        neighborhoods = assoc_map[comm]
-                        for hood in neighborhoods:
-                            # Only include if we have income data for the neighborhood
-                            if hood in income_map:
-                                breakdown_data.append({
-                                    "Community": comm,
-                                    "Neighborhood": hood,
-                                    "Household Income (2021)": income_map[hood]
-                                })
+                    if comm in assoc_details:
+                        for detail in assoc_details[comm]:
+                            breakdown_data.append({
+                                "Community": comm,
+                                "Neighborhood": detail['Neighborhood'],
+                                "Household Income (2021)": detail['Income'],
+                                "Population": detail['Population'],
+                                "Youth Pop (0-14)": detail.get('Youth Pop (0-14)'),
+                                "Indigenous %": detail.get('Indigenous %'),
+                                "Immigrant %": detail.get('Immigrant %'),
+                                "Source": detail['Source']
+                            })
                 
                 if breakdown_data:
                     breakdown_df = pd.DataFrame(breakdown_data)
@@ -970,6 +1070,128 @@ if page == "Experiments":
                 
     except FileNotFoundError:
         st.error("Reference data files not found. Please ensure 'data/reference/association_neighborhoods.json' and 'neighborhood_incomes.json' exist.")
+
+elif page == "Demographics":
+    st.title("🏘️ Community Demographics")
+    st.markdown("Overview of demographic data for all communities, grouped by Hockey Association.")
+    
+    import os
+    
+    # Load Data
+    try:
+        with open('data/reference/association_neighborhoods.json', 'r') as f:
+            assoc_map = json.load(f)
+            
+        demo_map = {}
+        if os.path.exists('data/reference/neighborhood_demographics.json'):
+            with open('data/reference/neighborhood_demographics.json', 'r') as f:
+                demo_map = json.load(f)
+        
+        # Build Table Data
+        table_data = []
+        
+        for assoc, neighborhoods in assoc_map.items():
+            for hood in neighborhoods:
+                # Defaults
+                pop = None
+                income = None
+                indig_pct = None
+                imm_pct = None
+                source = "Unknown"
+                in_census = False
+                age_data = {}
+                
+                # Lookup
+                if hood in demo_map:
+                    in_census = True
+                    data = demo_map[hood]
+                    pop = data.get('population')
+                    income = data.get('median_income')
+                    source = data.get('source', '2021 Census (Scraped)')
+                    
+                    if data.get('indigenous_identity'):
+                        val = data['indigenous_identity'].get('percentage')
+                        if isinstance(val, str):
+                            try:
+                                indig_pct = float(val.strip('%'))
+                            except ValueError:
+                                indig_pct = None
+                        else:
+                            indig_pct = val
+                        
+                    if data.get('immigrants') and data['immigrants'].get('Immigrants'):
+                        val = data['immigrants']['Immigrants'].get('percentage')
+                        if isinstance(val, str):
+                            try:
+                                imm_pct = float(val.strip('%'))
+                            except ValueError:
+                                imm_pct = None
+                        else:
+                            imm_pct = val
+
+                    if data.get('age_gender_breakdown'):
+                        for entry in data['age_gender_breakdown']:
+                            group = entry.get('age_group')
+                            total = entry.get('total')
+                            if group:
+                                age_data[f"Age {group}"] = total
+                
+                row = {
+                    "Association": assoc,
+                    "Neighborhood": hood,
+                    "In Census Profile": "✅" if in_census else "❌",
+                    "Population": pop,
+                    "Median Income": income,
+                    "Indigenous %": indig_pct,
+                    "Immigrant %": imm_pct,
+                    "Source": source
+                }
+                row.update(age_data)
+                table_data.append(row)
+        
+        if table_data:
+            df_demo = pd.DataFrame(table_data)
+            
+            # Formatting
+            st.dataframe(
+                df_demo,
+                column_config={
+                    "Median Income": st.column_config.NumberColumn(
+                        "Median Income",
+                        format="$%d"
+                    ),
+                    "Population": st.column_config.NumberColumn(
+                        "Population",
+                        format="%d"
+                    ),
+                    "Indigenous %": st.column_config.NumberColumn(
+                        "Indigenous %",
+                        format="%.1f%%"
+                    ),
+                    "Immigrant %": st.column_config.NumberColumn(
+                        "Immigrant %",
+                        format="%.1f%%"
+                    )
+                },
+                use_container_width=True,
+                height=800
+            )
+            
+            # Download Button
+            csv = df_demo.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "Download CSV",
+                csv,
+                "hockey_calgary_demographics.csv",
+                "text/csv",
+                key='download-csv'
+            )
+            
+        else:
+            st.warning("No demographic data found.")
+            
+    except Exception as e:
+        st.error(f"Error loading demographics: {e}")
 
 
 
