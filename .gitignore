@@ -23,3 +23,7 @@ Thumbs.db
 # Debug dumps
 *.html
 *.json
+!data/reference/*.json
+!association_neighborhoods.json
+!neighborhood_incomes.json
+!calgary_2021_census_incomes.json

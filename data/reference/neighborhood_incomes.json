@@ -1,0 +1,942 @@
+{
+    "Abbeydale": {
+        "income": 88000,
+        "source": "2021 Census"
+    },
+    "Acadia": {
+        "income": 72500,
+        "source": "2021 Census"
+    },
+    "Albert Park/Radisson Heights": {
+        "income": 66000,
+        "source": "2021 Census"
+    },
+    "Altadore": {
+        "income": 153000,
+        "source": "2021 Census"
+    },
+    "Alyth/Bonnybrook": {
+        "income": 60000,
+        "source": "Estimated (Previous Methodology)"
+    },
+    "Ambleton": {
+        "income": 110000,
+        "source": "Estimated (Previous Methodology)"
+    },
+    "Applewood Park": {
+        "income": 87000,
+        "source": "2021 Census"
+    },
+    "Arbour Lake": {
+        "income": 108000,
+        "source": "2021 Census"
+    },
+    "Aspen Woods": {
+        "income": 182000,
+        "source": "2021 Census"
+    },
+    "Auburn Bay": {
+        "income": 125000,
+        "source": "2021 Census"
+    },
+    "Banff Trail": {
+        "income": 84000,
+        "source": "2021 Census"
+    },
+    "Bankview": {
+        "income": 57600,
+        "source": "2021 Census"
+    },
+    "Bayview": {
+        "income": 296000,
+        "source": "2021 Census"
+    },
+    "Beddington Heights": {
+        "income": 90000,
+        "source": "2021 Census"
+    },
+    "Bel-Aire": {
+        "income": 280000,
+        "source": "2021 Census"
+    },
+    "Belmont": {
+        "income": 130000,
+        "source": "2021 Census"
+    },
+    "Beltline": {
+        "income": 71000,
+        "source": "2021 Census"
+    },
+    "Belvedere": {
+        "income": 85000,
+        "source": "Estimated (Previous Methodology)"
+    },
+    "Bonavista Downs": {
+        "income": 93000,
+        "source": "2021 Census"
+    },
+    "Bowness": {
+        "income": 72000,
+        "source": "2021 Census"
+    },
+    "Braeside": {
+        "income": 90000,
+        "source": "2021 Census"
+    },
+    "Brentwood": {
+        "income": 85000,
+        "source": "2021 Census"
+    },
+    "Bridgeland/Riverside": {
+        "income": 76000,
+        "source": "2021 Census"
+    },
+    "Bridlewood": {
+        "income": 105000,
+        "source": "2021 Census"
+    },
+    "Britannia": {
+        "income": 248000,
+        "source": "2021 Census"
+    },
+    "CFB-Currie": {
+        "income": 133000,
+        "source": "Aliased from Currie Barracks"
+    },
+    "CFB-Lincoln Park": {
+        "income": 57200,
+        "source": "Aliased from Lincoln Park"
+    },
+    "Cambrian Heights": {
+        "income": 104000,
+        "source": "2021 Census"
+    },
+    "Canyon Meadows": {
+        "income": 100000,
+        "source": "2021 Census"
+    },
+    "Capitol Hill": {
+        "income": 71500,
+        "source": "2021 Census"
+    },
+    "Carrington": {
+        "income": 113000,
+        "source": "2021 Census"
+    },
+    "Castleridge": {
+        "income": 87000,
+        "source": "2021 Census"
+    },
+    "Cedarbrae": {
+        "income": 88000,
+        "source": "2021 Census"
+    },
+    "Chaparral": {
+        "income": 134000,
+        "source": "2021 Census"
+    },
+    "Charleswood": {
+        "income": 115000,
+        "source": "2021 Census"
+    },
+    "Chinatown": {
+        "income": 54400,
+        "source": "2021 Census"
+    },
+    "Chinook Park": {
+        "income": 135000,
+        "source": "2021 Census"
+    },
+    "Christie Park": {
+        "income": 149000,
+        "source": "2021 Census"
+    },
+    "Citadel": {
+        "income": 119000,
+        "source": "2021 Census"
+    },
+    "Cityscape": {
+        "income": 108000,
+        "source": "2021 Census"
+    },
+    "Cliff Bungalow": {
+        "income": 60400,
+        "source": "2021 Census"
+    },
+    "Coach Hill": {
+        "income": 96000,
+        "source": "2021 Census"
+    },
+    "Collingwood": {
+        "income": 118000,
+        "source": "2021 Census"
+    },
+    "Copperfield": {
+        "income": 110000,
+        "source": "2021 Census"
+    },
+    "Coral Springs": {
+        "income": 121000,
+        "source": "2021 Census"
+    },
+    "Cornerstone": {
+        "income": 99000,
+        "source": "2021 Census"
+    },
+    "Cougar Ridge": {
+        "income": 151000,
+        "source": "2021 Census"
+    },
+    "Country Hills": {
+        "income": 97000,
+        "source": "2021 Census"
+    },
+    "Country Hills Village": {
+        "income": 70000,
+        "source": "2021 Census"
+    },
+    "Coventry Hills": {
+        "income": 114000,
+        "source": "2021 Census"
+    },
+    "Cranston": {
+        "income": 131000,
+        "source": "2021 Census"
+    },
+    "Crescent Heights": {
+        "income": 72500,
+        "source": "2021 Census"
+    },
+    "Crestmont": {
+        "income": 172000,
+        "source": "2021 Census"
+    },
+    "Dalhousie": {
+        "income": 85000,
+        "source": "2021 Census"
+    },
+    "Deer Ridge": {
+        "income": 94000,
+        "source": "2021 Census"
+    },
+    "Deer Run": {
+        "income": 102000,
+        "source": "2021 Census"
+    },
+    "Diamond Cove": {
+        "income": 135000,
+        "source": "2021 Census"
+    },
+    "Discovery Ridge": {
+        "income": 145000,
+        "source": "2021 Census"
+    },
+    "Douglasdale/Glen": {
+        "income": 130000,
+        "source": "2021 Census"
+    },
+    "Dover": {
+        "income": 69000,
+        "source": "2021 Census"
+    },
+    "Downtown Commercial Core": {
+        "income": 51200,
+        "source": "2021 Census"
+    },
+    "Downtown East Village": {
+        "income": 68000,
+        "source": "2021 Census"
+    },
+    "Downtown West End": {
+        "income": 81000,
+        "source": "2021 Census"
+    },
+    "Eagle Ridge": {
+        "income": 432000,
+        "source": "2021 Census"
+    },
+    "Eau Claire": {
+        "income": 130000,
+        "source": "2021 Census"
+    },
+    "Edgemont": {
+        "income": 121000,
+        "source": "2021 Census"
+    },
+    "Elbow Park": {
+        "income": 288000,
+        "source": "2021 Census"
+    },
+    "Elboya": {
+        "income": 94000,
+        "source": "2021 Census"
+    },
+    "Erin Woods": {
+        "income": 88000,
+        "source": "2021 Census"
+    },
+    "Evanston": {
+        "income": 127000,
+        "source": "2021 Census"
+    },
+    "Evergreen": {
+        "income": 122000,
+        "source": "2021 Census"
+    },
+    "Fairview": {
+        "income": 84000,
+        "source": "2021 Census"
+    },
+    "Falconridge": {
+        "income": 83000,
+        "source": "2021 Census"
+    },
+    "Forest Heights": {
+        "income": 79000,
+        "source": "2021 Census"
+    },
+    "Forest Lawn": {
+        "income": 58000,
+        "source": "2021 Census"
+    },
+    "Garrison Green": {
+        "income": 125000,
+        "source": "2021 Census"
+    },
+    "Garrison Woods": {
+        "income": 146000,
+        "source": "2021 Census"
+    },
+    "Glamorgan": {
+        "income": 75000,
+        "source": "2021 Census"
+    },
+    "Glenbrook": {
+        "income": 77000,
+        "source": "2021 Census"
+    },
+    "Glendale": {
+        "income": 117000,
+        "source": "2021 Census"
+    },
+    "Greenview": {
+        "income": 67000,
+        "source": "2021 Census"
+    },
+    "Greenwood/Greenbriar": {
+        "income": 57600,
+        "source": "2021 Census"
+    },
+    "Hamptons": {
+        "income": 134000,
+        "source": "2021 Census"
+    },
+    "Harvest Hills": {
+        "income": 104000,
+        "source": "2021 Census"
+    },
+    "Hawkwood": {
+        "income": 123000,
+        "source": "2021 Census"
+    },
+    "Haysboro": {
+        "income": 78500,
+        "source": "2021 Census"
+    },
+    "Hidden Valley": {
+        "income": 121000,
+        "source": "2021 Census"
+    },
+    "Highland Park": {
+        "income": 65000,
+        "source": "2021 Census"
+    },
+    "Highwood": {
+        "income": 90000,
+        "source": "2021 Census"
+    },
+    "Hillhurst": {
+        "income": 93000,
+        "source": "2021 Census"
+    },
+    "Hounsfield Heights/Briar Hill": {
+        "income": 111000,
+        "source": "2021 Census"
+    },
+    "Huntington Hills": {
+        "income": 78000,
+        "source": "2021 Census"
+    },
+    "Inglewood": {
+        "income": 87000,
+        "source": "2021 Census"
+    },
+    "Kelvin Grove": {
+        "income": 88000,
+        "source": "2021 Census"
+    },
+    "Killarney/Glengarry": {
+        "income": 99000,
+        "source": "2021 Census"
+    },
+    "Kincora": {
+        "income": 107000,
+        "source": "2021 Census"
+    },
+    "Kingsland": {
+        "income": 68000,
+        "source": "2021 Census"
+    },
+    "Lake Bonavista": {
+        "income": 131000,
+        "source": "2021 Census"
+    },
+    "Lakeview": {
+        "income": 116000,
+        "source": "2021 Census"
+    },
+    "Legacy": {
+        "income": 105000,
+        "source": "2021 Census"
+    },
+    "Lincoln Park": {
+        "income": 57200,
+        "source": "2021 Census"
+    },
+    "Livingston": {
+        "income": 116000,
+        "source": "2021 Census"
+    },
+    "Lower Mount Royal": {
+        "income": 57600,
+        "source": "2021 Census"
+    },
+    "MacEwan Glen": {
+        "income": 104000,
+        "source": "2021 Census"
+    },
+    "Mahogany": {
+        "income": 142000,
+        "source": "2021 Census"
+    },
+    "Manchester": {
+        "income": 44000,
+        "source": "2021 Census"
+    },
+    "Maple Ridge": {
+        "income": 117000,
+        "source": "2021 Census"
+    },
+    "Marlborough": {
+        "income": 80000,
+        "source": "2021 Census"
+    },
+    "Marlborough Park": {
+        "income": 81000,
+        "source": "2021 Census"
+    },
+    "Martindale": {
+        "income": 97000,
+        "source": "2021 Census"
+    },
+    "Mayfair": {
+        "income": 316000,
+        "source": "2021 Census"
+    },
+    "Mayland Heights": {
+        "income": 73500,
+        "source": "2021 Census"
+    },
+    "McKenzie Lake": {
+        "income": 133000,
+        "source": "2021 Census"
+    },
+    "McKenzie Towne": {
+        "income": 104000,
+        "source": "2021 Census"
+    },
+    "Meadowlark Park": {
+        "income": 143000,
+        "source": "2021 Census"
+    },
+    "Medicine Hill": {
+        "income": 95000,
+        "source": "Estimated (Previous Methodology)"
+    },
+    "Midnapore": {
+        "income": 91000,
+        "source": "2021 Census"
+    },
+    "Millrise": {
+        "income": 98000,
+        "source": "2021 Census"
+    },
+    "Mission": {
+        "income": 72000,
+        "source": "2021 Census"
+    },
+    "Monterey Park": {
+        "income": 95000,
+        "source": "2021 Census"
+    },
+    "Montgomery": {
+        "income": 96000,
+        "source": "2021 Census"
+    },
+    "Mount Pleasant": {
+        "income": 101000,
+        "source": "2021 Census"
+    },
+    "New Brighton": {
+        "income": 127000,
+        "source": "2021 Census"
+    },
+    "Nolan Hill": {
+        "income": 129000,
+        "source": "2021 Census"
+    },
+    "North Glenmore Park": {
+        "income": 109000,
+        "source": "2021 Census"
+    },
+    "North Haven": {
+        "income": 102000,
+        "source": "2021 Census"
+    },
+    "North Haven Upper": {
+        "income": 120000,
+        "source": "2021 Census"
+    },
+    "Oakridge": {
+        "income": 112000,
+        "source": "2021 Census"
+    },
+    "Ogden": {
+        "income": 75500,
+        "source": "2021 Census"
+    },
+    "Palliser": {
+        "income": 75500,
+        "source": "2021 Census"
+    },
+    "Panorama Hills": {
+        "income": 112000,
+        "source": "2021 Census"
+    },
+    "Parkdale": {
+        "income": 114000,
+        "source": "2021 Census"
+    },
+    "Parkhill": {
+        "income": 107000,
+        "source": "2021 Census"
+    },
+    "Parkland": {
+        "income": 125000,
+        "source": "2021 Census"
+    },
+    "Patterson": {
+        "income": 93000,
+        "source": "2021 Census"
+    },
+    "Penbrooke Meadows": {
+        "income": 73000,
+        "source": "2021 Census"
+    },
+    "Pineridge": {
+        "income": 76000,
+        "source": "2021 Census"
+    },
+    "Point McKay": {
+        "income": 92000,
+        "source": "Proxy: Point Mckay (2021 Census)"
+    },
+    "Pump Hill": {
+        "income": 140000,
+        "source": "2021 Census"
+    },
+    "Queens Park Village": {
+        "income": 66000,
+        "source": "2021 Census"
+    },
+    "Queensland": {
+        "income": 91000,
+        "source": "2021 Census"
+    },
+    "Ramsay": {
+        "income": 97000,
+        "source": "2021 Census"
+    },
+    "Ranchlands": {
+        "income": 89000,
+        "source": "2021 Census"
+    },
+    "Red Carpet": {
+        "income": 59200,
+        "source": "2021 Census"
+    },
+    "Redstone": {
+        "income": 100000,
+        "source": "2021 Census"
+    },
+    "Renfrew": {
+        "income": 96000,
+        "source": "2021 Census"
+    },
+    "Richmond": {
+        "income": 113000,
+        "source": "2021 Census"
+    },
+    "Rideau Park": {
+        "income": 170000,
+        "source": "2021 Census"
+    },
+    "Riverbend": {
+        "income": 118000,
+        "source": "2021 Census"
+    },
+    "Rocky Ridge": {
+        "income": 118000,
+        "source": "2021 Census"
+    },
+    "Rosedale": {
+        "income": 184000,
+        "source": "2021 Census"
+    },
+    "Rosemont": {
+        "income": 107000,
+        "source": "2021 Census"
+    },
+    "Rosscarrock": {
+        "income": 68500,
+        "source": "2021 Census"
+    },
+    "Roxboro": {
+        "income": 232000,
+        "source": "2021 Census"
+    },
+    "Royal Oak": {
+        "income": 120000,
+        "source": "2021 Census"
+    },
+    "Rundle": {
+        "income": 83000,
+        "source": "2021 Census"
+    },
+    "Rutland Park": {
+        "income": 80000,
+        "source": "2021 Census"
+    },
+    "Saddle Ridge": {
+        "income": 104000,
+        "source": "2021 Census"
+    },
+    "Sage Hill": {
+        "income": 106000,
+        "source": "2021 Census"
+    },
+    "Sandstone Valley": {
+        "income": 101000,
+        "source": "2021 Census"
+    },
+    "Scarboro": {
+        "income": 268000,
+        "source": "2021 Census"
+    },
+    "Scarboro/Sunalta West": {
+        "income": 138000,
+        "source": "2021 Census"
+    },
+    "Scenic Acres": {
+        "income": 134000,
+        "source": "2021 Census"
+    },
+    "Seton": {
+        "income": 80000,
+        "source": "2021 Census"
+    },
+    "Shaganappi": {
+        "income": 83000,
+        "source": "2021 Census"
+    },
+    "Shawnee Slopes": {
+        "income": 100000,
+        "source": "2021 Census"
+    },
+    "Shawnessy": {
+        "income": 105000,
+        "source": "2021 Census"
+    },
+    "Sherwood": {
+        "income": 108000,
+        "source": "2021 Census"
+    },
+    "Signal Hill": {
+        "income": 116000,
+        "source": "2021 Census"
+    },
+    "Silver Springs": {
+        "income": 106000,
+        "source": "2021 Census"
+    },
+    "Silverado": {
+        "income": 125000,
+        "source": "2021 Census"
+    },
+    "Skyview Ranch": {
+        "income": 94000,
+        "source": "2021 Census"
+    },
+    "Somerset": {
+        "income": 97000,
+        "source": "2021 Census"
+    },
+    "South Calgary": {
+        "income": 87000,
+        "source": "2021 Census (Manual Fix)"
+    },
+    "Southview": {
+        "income": 70000,
+        "source": "2021 Census"
+    },
+    "Southwood": {
+        "income": 80000,
+        "source": "2021 Census"
+    },
+    "Springbank Hill": {
+        "income": 152000,
+        "source": "2021 Census"
+    },
+    "Spruce Cliff": {
+        "income": 69000,
+        "source": "2021 Census"
+    },
+    "St. Andrews Heights": {
+        "income": 117000,
+        "source": "2021 Census"
+    },
+    "Strathcona Park": {
+        "income": 142000,
+        "source": "2021 Census"
+    },
+    "Sunalta": {
+        "income": 58000,
+        "source": "2021 Census"
+    },
+    "Sundance": {
+        "income": 129000,
+        "source": "2021 Census"
+    },
+    "Sunnyside": {
+        "income": 69500,
+        "source": "2021 Census"
+    },
+    "Taradale": {
+        "income": 100000,
+        "source": "2021 Census"
+    },
+    "Temple": {
+        "income": 87000,
+        "source": "2021 Census"
+    },
+    "Thorncliffe": {
+        "income": 73500,
+        "source": "2021 Census"
+    },
+    "Tsuut'ina Nation": {
+        "income": 31500,
+        "source": "CIRNAC 2021 (Pop) / AB First Nations Median Proxy (Income)"
+    },
+    "Tuscany": {
+        "income": 142000,
+        "source": "2021 Census"
+    },
+    "Tuxedo Park": {
+        "income": 85000,
+        "source": "2021 Census"
+    },
+    "University Heights": {
+        "income": 65500,
+        "source": "2021 Census"
+    },
+    "Upper Mount Royal": {
+        "income": 196000,
+        "source": "2021 Census"
+    },
+    "Valley Ridge": {
+        "income": 151000,
+        "source": "2021 Census"
+    },
+    "Varsity": {
+        "income": 90000,
+        "source": "2021 Census"
+    },
+    "Vista Heights": {
+        "income": 74000,
+        "source": "2021 Census"
+    },
+    "Walden": {
+        "income": 109000,
+        "source": "2021 Census"
+    },
+    "West Hillhurst": {
+        "income": 123000,
+        "source": "2021 Census"
+    },
+    "West Springs": {
+        "income": 172000,
+        "source": "2021 Census"
+    },
+    "Westgate": {
+        "income": 90000,
+        "source": "2021 Census"
+    },
+    "Whitehorn": {
+        "income": 88000,
+        "source": "2021 Census"
+    },
+    "Wildwood": {
+        "income": 148000,
+        "source": "2021 Census"
+    },
+    "Willow Park": {
+        "income": 108000,
+        "source": "2021 Census"
+    },
+    "Windsor Park": {
+        "income": 67000,
+        "source": "2021 Census"
+    },
+    "Winston Heights/Mountview": {
+        "income": 97000,
+        "source": "2021 Census"
+    },
+    "Wolf Willow": {
+        "income": 112000,
+        "source": "2021 Census"
+    },
+    "Woodbine": {
+        "income": 115000,
+        "source": "2021 Census"
+    },
+    "Woodlands": {
+        "income": 95000,
+        "source": "2021 Census"
+    },
+    "Yorkville": {
+        "income": 112000,
+        "source": "2021 Census"
+    },
+    "Currie Barracks": {
+        "income": 133000,
+        "source": "2021 Census"
+    },
+    "Erlton": {
+        "income": 115000,
+        "source": "2021 Census"
+    },
+    "Fish Creek Park": {
+        "income": 92000,
+        "source": "2021 Census"
+    },
+    "Nolan\u00a0Hill": {
+        "income": 129000,
+        "source": "2021 Census"
+    },
+    "Point Mckay": {
+        "income": 92000,
+        "source": "2021 Census"
+    },
+    "Shepard Industrial": {
+        "income": 61200,
+        "source": "2021 Census"
+    },
+    "University District": {
+        "income": 74500,
+        "source": "2021 Census"
+    },
+    "Alpine Park": {
+        "income": 110000,
+        "source": "Estimated (New Community)"
+    },
+    "Hotchkiss": {
+        "income": 100000,
+        "source": "Estimated (New Community)"
+    },
+    "Rangeview": {
+        "income": 100000,
+        "source": "Estimated (New Community)"
+    },
+    "Rockland Park": {
+        "income": 120000,
+        "source": "Estimated (New Community)"
+    },
+    "Greenwich": {
+        "income": 100000,
+        "source": "Estimated (New Community)"
+    },
+    "Vermillion Hill": {
+        "income": 100000,
+        "source": "Estimated (New Community)"
+    },
+    "Glacier Ridge": {
+        "income": 110000,
+        "source": "Estimated (New Community)"
+    },
+    "University of Calgary Residence": {
+        "income": 20000,
+        "source": "Estimated (Student Housing)"
+    },
+    "Springbank": {
+        "income": 150000,
+        "source": "Estimated (Rocky View County)"
+    },
+    "Harmony": {
+        "income": 140000,
+        "source": "Estimated (Rocky View County)"
+    },
+    "Elbow Valley": {
+        "income": 180000,
+        "source": "Estimated (Rocky View County)"
+    },
+    "Lynx Ridge": {
+        "income": 160000,
+        "source": "Estimated (Rocky View County)"
+    },
+    "Bearspaw": {
+        "income": 150000,
+        "source": "Estimated (Rocky View County)"
+    },
+    "Quarry Park": {
+        "income": 130000,
+        "source": "Aliased from Douglasdale/Glen"
+    },
+    "Victoria Park": {
+        "income": 71000,
+        "source": "Aliased from Beltline"
+    },
+    "Briar Hill": {
+        "income": 111000,
+        "source": "Aliased from Hounsfield Heights/Briar Hill"
+    },
+    "Hanson Ranch": {
+        "income": 121000,
+        "source": "Proxy: Hidden Valley (2021 Census)"
+    },
+    "Wentworth": {
+        "income": 172000,
+        "source": "Proxy: West Springs (2021 Census)"
+    },
+    "Elgin": {
+        "income": 104000,
+        "source": "Proxy: McKenzie Towne (2021 Census)"
+    },
+    "Silverton": {
+        "income": 125000,
+        "source": "Proxy: Silverado (2021 Census)"
+    },
+    "Providence": {
+        "income": 122000,
+        "source": "Proxy: Evergreen (2021 Census)"
+    }
+}

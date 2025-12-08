@@ -1,0 +1,18 @@
+{
+  "community": "Tsuut'ina Nation 145",
+  "census_year": "2016",
+  "note": "2021 Census data was suppressed or incompletely enumerated. Using 2016 data as fallback.",
+  "population": 1643,
+  "median_household_income": 106816,
+  "indigenous_identity": {
+    "total": 615,
+    "first_nations": 545,
+    "metis": 50,
+    "inuit": 10
+  },
+  "immigration_status": {
+    "non_immigrants": 1525,
+    "immigrants": 115,
+    "non_permanent_residents": 0
+  }
+}
