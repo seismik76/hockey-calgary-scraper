@@ -16,6 +16,8 @@ env/
 *.db
 *.sqlite3
 !data/seed/*.db
+# But not the timestamped backups that promote_to_seed.py creates
+data/seed/*.bak.db
 
 # Output
 *.csv

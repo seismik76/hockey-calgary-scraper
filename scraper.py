@@ -25,6 +25,11 @@ BASE_URL = "https://www.hockeycalgary.ca"
 # Current season — used as a fallback when discovery fails. Update once a year.
 CURRENT_SEASON = "2025-2026"
 
+# Historical seasons fetched in addition to the current one. Used by both the
+# top-level _do_sync discovery loop and by process_league as a fallback when a
+# league page doesn't render a server-side season selector (e.g. elite-council).
+HISTORICAL_YEARS = ["2024-2025", "2023-2024", "2022-2023", "2021-2022", "2020-2021"]
+
 # Request timeouts in seconds: (connect, read)
 HTTP_TIMEOUT = (5, 30)
 
@@ -130,8 +135,10 @@ def get_leagues(year=None):
                 elif 'Playoff' in name:
                     league_type = 'Playoff'
                 
-                # Filter for U9, U11, U13, U15
-                if any(cat in name for cat in ['U9', 'U11', 'U13', 'U15']):
+                # Filter for U13, U15, U16, U18. U11 is intentionally excluded —
+                # the legacy hockeycalgary.ca site publishes empty U11 standings tables
+                # (U11 data lives on RAMP / Alberta One). U9 has no published standings.
+                if any(cat in name for cat in ['U13', 'U15', 'U16', 'U18']):
                     leagues.append({
                         'name': name,
                         'slug': slug,
@@ -254,7 +261,7 @@ def get_tournaments(season_slug):
                     league_slug = href.split('/league/')[-1]
                     name = a.get_text(strip=True)
                     
-                    if any(cat in name for cat in ['U9', 'U11', 'U13', 'U15']):
+                    if any(cat in name for cat in ['U11', 'U13', 'U15', 'U16', 'U18']):
                          results.append({
                             'name': f"{t['name']} - {name}",
                             'slug': league_slug,
@@ -863,16 +870,18 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
         else:
             # Legacy/Standard
             
-            # 1. Discover all variations (Regular, Seeding, Playoff)
-            urls_to_process = {league_info['url']}
-            base_soup = get_soup(league_info['url'])
-            if base_soup:
-                for a in base_soup.find_all('a', href=True):
-                    href = a['href']
-                    # Look for sibling links (same league, different type)
-                    if '/league/' in href and league_info['slug'] in href:
-                        if '/type/' in href:
-                             urls_to_process.add(f"{BASE_URL}{href}")
+            # 1. Always try the base URL plus explicit /type/seeding and /type/playoff
+            #    variants. We used to rely on discovering type-links from the base page,
+            #    but some pages (notably elite-council) don't render them — and
+            #    community-council pages don't always link to /type/seeding even when
+            #    the seeding data exists at that URL.
+            base = league_info['url']
+            urls_to_process = [
+                base,
+                f"{base}/type/seeding",
+                f"{base}/type/playoff",
+            ]
+            base_soup = get_soup(base)
 
             # Collect season slugs as we go, so we don't have to re-fetch at the end
             # to return them for tournament discovery.
@@ -880,12 +889,6 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
 
             # 2. Process each variation
             for url in urls_to_process:
-                # /type/league is just an alias for the base "Regular" URL — skip
-                # the variant when the base URL is also in the set to avoid a
-                # duplicate fetch.
-                if '/type/league' in url and league_info['url'] in urls_to_process:
-                    continue
-
                 # Determine type from URL
                 current_type = 'Regular'
                 if '/type/seeding' in url:
@@ -925,6 +928,18 @@ def process_league(league_info, community_map, processed_leagues, processed_lock
                 )
 
                 seasons = get_seasons_for_league(url)
+
+                # Fallback when the page doesn't render a server-side season selector
+                # (e.g. elite-council pages): synthesize season entries from our known
+                # list. Each per-season URL ends up being <base>/season/<season>, which
+                # the get_soup loop below will rewrite to include /type/<type>.
+                if not seasons:
+                    base_for_seasons = re.sub(r'/type/[^/]+', '', url).rstrip('/')
+                    seasons = [
+                        {'name': y, 'slug': y, 'url': f"{base_for_seasons}/season/{y}"}
+                        for y in [CURRENT_SEASON] + HISTORICAL_YEARS
+                    ]
+
                 for s in seasons:
                     if s['slug'] not in collected_season_slugs:
                         collected_season_slugs.append(s['slug'])
@@ -1185,7 +1200,7 @@ def _do_sync(progress_callback=None):
     if progress_callback:
         progress_callback(5, "Fetching legacy/historical leagues...")
 
-    legacy_years = [None, "2023-2024", "2022-2023", "2021-2022", "2020-2021"]
+    legacy_years = [None] + HISTORICAL_YEARS
     legacy_leagues = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as ex:
         for batch in ex.map(get_leagues, legacy_years):
