@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint
+from datetime import datetime
+from sqlalchemy import Column, Integer, String, ForeignKey, UniqueConstraint, DateTime
 from sqlalchemy.orm import relationship, declarative_base
 
 Base = declarative_base()
@@ -44,7 +45,10 @@ class Standing(Base):
     season_id = Column(Integer, ForeignKey('seasons.id'), nullable=False)
     league_id = Column(Integer, ForeignKey('leagues.id'), nullable=False)
     team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
-    
+    # Snapshot of the team's community at scrape time. Denormalized so re-mapping
+    # a team in community_map.json does not rewrite historical analytics.
+    community_id = Column(Integer, ForeignKey('communities.id'))
+
     gp = Column(Integer)
     w = Column(Integer)
     l = Column(Integer)
@@ -54,9 +58,23 @@ class Standing(Base):
     ga = Column(Integer)
     diff = Column(Integer)
     source_url = Column(String)
-    
+
     season = relationship("Season")
     league = relationship("League")
     team = relationship("Team")
+    community = relationship("Community")
 
     __table_args__ = (UniqueConstraint('season_id', 'league_id', 'team_id', name='_standing_uc'),)
+
+
+class ScrapeRun(Base):
+    __tablename__ = 'scrape_runs'
+    id = Column(Integer, primary_key=True)
+    started_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    finished_at = Column(DateTime)
+    status = Column(String, nullable=False, default='running')  # running, success, failed
+    error_message = Column(String)
+    leagues_processed = Column(Integer)   # total League rows after scrape
+    leagues_failed = Column(Integer)      # workers that raised during processing
+    failed_leagues = Column(String)       # comma-joined names of failed leagues (truncated)
+    standings_count = Column(Integer)

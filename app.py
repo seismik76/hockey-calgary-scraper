@@ -3,9 +3,9 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import json
-from sqlalchemy import create_engine
 from scraper import sync_data
-from database import init_db
+from database import init_db, engine, SessionLocal
+from models import ScrapeRun
 import sys
 from io import StringIO
 import time
@@ -22,39 +22,67 @@ st.set_page_config(page_title="Hockey Calgary Analytics", layout="wide")
 
 st.warning("Disclaimer: this is a personal interest project and I don't stand behind any of it - this is a subject that I'm personally interested in and it's also a fun development project but I'm not accountable to anyone for it's accuracy")
 
-# Database Connection
-DB_URL = "sqlite:///hockey_calgary.db"
-engine = create_engine(DB_URL)
-
-# Initialize Database (Ensure tables exist)
+# Initialize Database (Ensure tables exist). `engine` is imported from database.py
+# and reads DATABASE_URL from the environment / .env.
 init_db()
+
+
+def get_last_scrape():
+    db = SessionLocal()
+    try:
+        return (
+            db.query(ScrapeRun)
+            .filter(ScrapeRun.status == 'success')
+            .order_by(ScrapeRun.finished_at.desc())
+            .first()
+        )
+    finally:
+        db.close()
+
+
+def get_previous_scrape(before_id):
+    """Most recent successful scrape strictly before the given id."""
+    db = SessionLocal()
+    try:
+        return (
+            db.query(ScrapeRun)
+            .filter(ScrapeRun.status == 'success', ScrapeRun.id < before_id)
+            .order_by(ScrapeRun.finished_at.desc())
+            .first()
+        )
+    finally:
+        db.close()
 
 # --- Helper Functions ---
 
 def load_data():
     """Loads data from the database into a Pandas DataFrame."""
+    # Note: community joins directly from standings.community_id (denormalized at scrape time).
+    # Older rows fall back to teams.community_id via LEFT JOIN + COALESCE so historical
+    # records that pre-date the column still resolve.
     query = """
-    SELECT 
-        s.name as Season,
-        l.name as League,
-        l.type as Type,
-        l.stream as Stream,
-        c.name as Community,
-        t.name as Team,
-        st.gp as GP,
-        st.w as W,
-        st.l as L,
-        st.t as T,
-        st.pts as PTS,
-        st.gf as GF,
-        st.ga as GA,
-        st.diff as Diff,
-        st.source_url as Source
+    SELECT
+        s.name as "Season",
+        l.name as "League",
+        l.type as "Type",
+        l.stream as "Stream",
+        COALESCE(c_st.name, c_t.name) as "Community",
+        t.name as "Team",
+        st.gp as "GP",
+        st.w as "W",
+        st.l as "L",
+        st.t as "T",
+        st.pts as "PTS",
+        st.gf as "GF",
+        st.ga as "GA",
+        st.diff as "Diff",
+        st.source_url as "Source"
     FROM standings st
     JOIN seasons s ON st.season_id = s.id
     JOIN leagues l ON st.league_id = l.id
     JOIN teams t ON st.team_id = t.id
-    JOIN communities c ON t.community_id = c.id
+    LEFT JOIN communities c_st ON st.community_id = c_st.id
+    LEFT JOIN communities c_t ON t.community_id = c_t.id
     """
     try:
         df = pd.read_sql(query, engine)
@@ -92,9 +120,43 @@ st.sidebar.title("🏒 Hockey Calgary Analytics")
 # Navigation
 page = st.sidebar.radio("Navigation", ["Analytics", "Tier 1 Dilution Analysis"])
 
-# Scraper Control
-st.sidebar.header("Data Sync")
-if st.sidebar.button("Run Scraper (Sync Data)"):
+# Last scrape timestamp
+last_run = get_last_scrape()
+if last_run and last_run.finished_at:
+    st.sidebar.caption(
+        f"Last updated: {last_run.finished_at.strftime('%Y-%m-%d %H:%M UTC')} "
+        f"({last_run.standings_count or 0} standings)"
+    )
+    if last_run.leagues_failed:
+        st.sidebar.warning(
+            f"{last_run.leagues_failed} league(s) failed during last scrape: "
+            f"{last_run.failed_leagues or '(see logs)'}"
+        )
+    # Drift check against the prior successful scrape — surfaces silent URL-pattern breaks.
+    prev = get_previous_scrape(last_run.id)
+    if prev and prev.standings_count and last_run.standings_count:
+        delta = last_run.standings_count - prev.standings_count
+        pct = delta / prev.standings_count
+        if pct < -0.05:
+            st.sidebar.warning(
+                f"Standings dropped {abs(delta)} rows ({pct:.0%}) vs previous scrape "
+                f"({prev.standings_count} → {last_run.standings_count}). "
+                "An upstream source may have changed."
+            )
+else:
+    st.sidebar.caption("Last updated: never — run the scraper to populate.")
+
+# Scraper Control — gated behind a confirmation since a full sync takes ~10-15 min
+# and hammers upstream servers.
+with st.sidebar.expander("⚙️ Data Sync"):
+    st.caption(
+        "Runs the scraper against Hockey Calgary, RAMP, and TeamLinkt. "
+        "Takes ~10-15 minutes; the page will block while it runs."
+    )
+    confirm = st.checkbox("I want to run the scraper now", key="confirm_scrape")
+    run_clicked = st.button("Run Scraper (Sync Data)", disabled=not confirm)
+
+if run_clicked:
     progress_bar = st.sidebar.progress(0)
     status_text = st.sidebar.empty()
     

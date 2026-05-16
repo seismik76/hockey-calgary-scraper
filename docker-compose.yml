@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: hockey_calgary_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hockey
+      POSTGRES_PASSWORD: hockey
+      POSTGRES_DB: hockey_calgary
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hockey -d hockey_calgary"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

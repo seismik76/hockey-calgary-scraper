@@ -39,16 +39,23 @@ def normalize_community_name(team_name, mapping=None):
         
     name_upper = team_name.upper()
     
-    # Known Community Mappings (Order matters for overlapping names)
-    # Based on user feedback and common Calgary associations
+    # Known Community Mappings — ORDER MATTERS for overlapping names.
+    # Iteration is insertion order: the FIRST substring match wins, so put
+    # specific identifiers (association codes + full community names) BEFORE
+    # generic nicknames (e.g. "NWCAA Bruins" should match NWCAA, not BRUINS).
     known_map = {
+        # 1. Association codes (most specific)
         "GHC": "Girls Hockey Calgary",
         "GIRLS HOCKEY CALGARY": "Girls Hockey Calgary",
         "CBHA": "CBHA",
+        "NWCAA": "North West",
+        "CNHA": "Calgary Northstars",
+        "CRAA": "Calgary Royals",
+
+        # 2. Full community names
         "GLENLAKE": "Glenlake",
         "BOW VALLEY": "Bow Valley",
         "BOW RIVER": "Bow River",
-        "BRUINS": "Bow River", 
         "SPRINGBANK": "Springbank",
         "CROWFOOT": "Crowfoot",
         "TRAILS WEST": "Trails West",
@@ -57,21 +64,21 @@ def normalize_community_name(team_name, mapping=None):
         "SOUTHWEST": "Southwest",
         "BLACKFOOT": "Blackfoot",
         "MCKNIGHT": "McKnight",
-        "MUSTANGS": "McKnight",
         "MIDNAPORE": "Midnapore",
-        "MAVERICKS": "Midnapore",
         "LAKE BONAVISTA": "Lake Bonavista",
         "NORTH WEST": "North West",
         "NORTHWEST": "North West",
-        "NWCAA": "North West",
-        "WARRIORS": "North West",
         "CALGARY NORTHSTARS": "Calgary Northstars",
-        "CNHA": "Calgary Northstars",
         "CALGARY ROYALS": "Calgary Royals",
-        "CRAA": "Calgary Royals",
         "KNIGHTS": "Knights",
         "WOLVERINES": "Wolverines",
-        "RAIDERS": "Raiders"
+        "RAIDERS": "Raiders",
+
+        # 3. Generic team nicknames (ambiguous — only used when nothing above matched)
+        "BRUINS": "Bow River",
+        "MUSTANGS": "McKnight",
+        "MAVERICKS": "Midnapore",
+        "WARRIORS": "North West",
     }
     
     normalized_name = None
