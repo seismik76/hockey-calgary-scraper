@@ -17,8 +17,13 @@ config = context.config
 
 # Override sqlalchemy.url from the environment so Alembic uses the same
 # DATABASE_URL as the application (no need to maintain it in two places).
+# We install psycopg3, not psycopg2 — force the driver if the URL doesn't
+# specify one (Neon and most managed hosts return a plain `postgresql://`
+# URL with no driver). Mirrors the same normalization in database.py.
 db_url = os.environ.get("DATABASE_URL")
 if db_url:
+    if db_url.startswith("postgresql://"):
+        db_url = "postgresql+psycopg://" + db_url[len("postgresql://"):]
     config.set_main_option("sqlalchemy.url", db_url)
 
 if config.config_file_name is not None:
