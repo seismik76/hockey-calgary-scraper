@@ -14,6 +14,14 @@ if not DATABASE_URL:
         "and point it at your local Postgres instance — see docker-compose.yml."
     )
 
+# We install psycopg3 (the `psycopg` package), not psycopg2. SQLAlchemy
+# defaults to psycopg2 for `postgresql://` URLs, which fails with ImportError
+# on hosts where only psycopg3 is installed (i.e. ours). If the URL doesn't
+# already specify a driver, force psycopg3. This makes a plain Neon-style
+# `postgresql://user:pass@host/db` URL work without manual editing.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL[len("postgresql://"):]
+
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 # expire_on_commit=False prevents SQLAlchemy from invalidating instance attributes
 # after commit. Without it, every attribute access after commit reopens a transaction
