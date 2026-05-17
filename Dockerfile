@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # -----------------------------------------------------------------------------
 # Single image that serves the Next.js web app *and* carries the Python scraper
 # along with its dependencies. The web app's "Run Scraper" admin button spawns
@@ -8,7 +6,7 @@
 # -----------------------------------------------------------------------------
 
 # ----- Stage 1: build the Next.js standalone bundle -------------------------
-FROM node:20-bookworm-slim AS web-build
+FROM node:22-bookworm-slim AS web-build
 WORKDIR /app/web
 
 # Copy manifests first to maximise layer caching.
@@ -21,7 +19,7 @@ RUN npm run build
 
 
 # ----- Stage 2: runtime ------------------------------------------------------
-FROM node:20-bookworm-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 
 # Python + system deps the scraper needs (pdfplumber → cairo/poppler? no, just
 # stdlib via pypdfium2; psycopg → libpq).
