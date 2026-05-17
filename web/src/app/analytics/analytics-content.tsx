@@ -20,6 +20,7 @@ import { TopBar } from '@/components/top-bar';
 import { AdminPanel, type ScraperRun } from '@/components/admin-panel';
 import { DriftBanner, type SerializedDrift } from '@/components/drift-banner';
 import { CoveragePopover } from '@/components/coverage-popover';
+import { ScrapeProgressBanner } from '@/components/scrape-progress';
 
 type Props = {
   rows: StandingRow[];
@@ -201,6 +202,7 @@ export function AnalyticsContent({
 
       <div className={s.mainCol}>
         <main className={s.main}>
+          <ScrapeProgressBanner initialRun={initialRun} />
           <DriftBanner drift={drift} />
           {filtered.length === 0 ? (
             <div className={s.emptyCard}>

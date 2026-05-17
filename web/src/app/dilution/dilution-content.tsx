@@ -18,6 +18,7 @@ import { TopBar } from '@/components/top-bar';
 import { AdminPanel, type ScraperRun } from '@/components/admin-panel';
 import { DriftBanner, type SerializedDrift } from '@/components/drift-banner';
 import { CoveragePopover } from '@/components/coverage-popover';
+import { ScrapeProgressBanner } from '@/components/scrape-progress';
 import { DilutionFilters } from './dilution-filters';
 import { HeadlineResult } from './headline-result';
 import { ThresholdTable } from './threshold-table';
@@ -172,6 +173,7 @@ export function DilutionContent({
 
       <div className={s.mainCol}>
         <main className={s.main}>
+          <ScrapeProgressBanner initialRun={initialRun} />
           <DriftBanner drift={drift} />
           <header className={s.header}>
             <LargeTitle as="h1" block>
