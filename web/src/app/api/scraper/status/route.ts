@@ -3,10 +3,15 @@ import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { scrapeRuns } from '@/lib/db/schema';
+import { markStaleRunsFailed } from '@/lib/scrape-cleanup';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  // Flip any zombie "running" rows to "failed" before reporting — the banner
+  // polls this endpoint, so the cleanup propagates to the UI within one tick.
+  await markStaleRunsFailed();
+
   const rows = await db
     .select({
       id: scrapeRuns.id,

@@ -4,11 +4,15 @@ import { scrapeRuns } from '@/lib/db/schema';
 import { loadStandings } from '@/lib/analytics/data';
 import { adminEnabled, isAdmin } from '@/lib/auth';
 import { loadDrift } from '@/lib/analytics/drift';
+import { markStaleRunsFailed } from '@/lib/scrape-cleanup';
 import { DilutionContent } from './dilution-content';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DilutionPage() {
+  // Sweep zombie scrape_runs before reading (mirrors / page).
+  await markStaleRunsFailed();
+
   const [rows, latestRunRows, lastSuccessRows, admin, drift] = await Promise.all([
     loadStandings(),
     db

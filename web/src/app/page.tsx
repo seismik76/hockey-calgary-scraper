@@ -4,11 +4,16 @@ import { scrapeRuns } from '@/lib/db/schema';
 import { loadStandings } from '@/lib/analytics/data';
 import { adminEnabled, isAdmin } from '@/lib/auth';
 import { loadDrift } from '@/lib/analytics/drift';
+import { markStaleRunsFailed } from '@/lib/scrape-cleanup';
 import { AnalyticsContent } from './analytics/analytics-content';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
+  // Sweep zombie scrape_runs before reading — otherwise a row left "running"
+  // by a previous container death surfaces as a permanent progress banner.
+  await markStaleRunsFailed();
+
   const [rows, latestRunRows, lastSuccessRows, admin, drift] = await Promise.all([
     loadStandings(),
     db

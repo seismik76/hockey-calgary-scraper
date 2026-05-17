@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import { scrapeRuns } from '@/lib/db/schema';
 import { adminEnabled, isAdmin } from '@/lib/auth';
 import { errorFields, log } from '@/lib/log';
+import { markStaleRunsFailed } from '@/lib/scrape-cleanup';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
     body = {};
   }
   const reset = Boolean(body.reset);
+
+  // 0. Sweep zombie runs first — otherwise a row left "running" by a previous
+  //    container death blocks every subsequent trigger forever.
+  await markStaleRunsFailed();
 
   // 1. Block concurrent runs (the scraper writes status='running' on entry).
   const existing = await db
