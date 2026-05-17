@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import json
+import os
 from scraper import sync_data
 from database import init_db, engine, SessionLocal
 from models import ScrapeRun
@@ -10,6 +11,11 @@ import sys
 from io import StringIO
 import time
 from utilities.tiering_logic import parse_tier_info, calculate_compliance, get_u11_u13_distribution, get_u15_u18_split, get_u15_u18_tier_distribution
+
+# Admin gate — controls visibility of the "Run Scraper" UI. If ADMIN_PASSWORD
+# isn't set, the admin UI is hidden entirely (correct posture for any public
+# deployment). When it IS set, a small unlock form appears in the sidebar.
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
 
 try:
     import matplotlib
@@ -167,26 +173,44 @@ if last_run and last_run.finished_at:
 else:
     st.sidebar.caption("Last updated: never — run the scraper to populate.")
 
-# Scraper Control — gated behind a confirmation since a full sync takes ~10-15 min
-# and hammers upstream servers.
-with st.sidebar.expander("⚙️ Data Sync"):
-    st.caption(
-        "Runs the scraper against Hockey Calgary, RAMP, and TeamLinkt. "
-        "Takes ~10-15 minutes; the page will block while it runs."
-    )
-    sync_mode = st.radio(
-        "Mode",
-        ["Update existing data", "Full reset (rebuild from scratch)"],
-        index=0,
-        help=(
-            "Update is safe and additive — existing standings stay, new/changed rows "
-            "get upserted. Full reset drops everything first; only use it if the DB "
-            "is corrupted or you want to start clean."
-        ),
-    )
-    do_reset = sync_mode.startswith("Full reset")
-    confirm = st.checkbox("I want to run the scraper now", key="confirm_scrape")
-    run_clicked = st.button("Run Scraper (Sync Data)", disabled=not confirm)
+# Admin gate — only show Run Scraper controls when ADMIN_PASSWORD is set AND
+# the visitor has unlocked it this session. The unlock persists per-session via
+# st.session_state.
+run_clicked = False
+do_reset = False
+if ADMIN_PASSWORD:
+    if not st.session_state.get('admin_unlocked'):
+        with st.sidebar.expander("🔐 Admin"):
+            pw = st.text_input("Password", type="password", key="admin_pw_input")
+            if st.button("Unlock", key="admin_unlock_btn"):
+                if pw == ADMIN_PASSWORD:
+                    st.session_state['admin_unlocked'] = True
+                    st.rerun()
+                else:
+                    st.error("Wrong password.")
+    else:
+        # Unlocked: show the Data Sync expander.
+        with st.sidebar.expander("⚙️ Data Sync", expanded=True):
+            st.caption(
+                "Runs the scraper against Hockey Calgary, RAMP, and TeamLinkt. "
+                "Takes ~10-15 minutes; the page will block while it runs."
+            )
+            sync_mode = st.radio(
+                "Mode",
+                ["Update existing data", "Full reset (rebuild from scratch)"],
+                index=0,
+                help=(
+                    "Update is safe and additive — existing standings stay, new/changed rows "
+                    "get upserted. Full reset drops everything first; only use it if the DB "
+                    "is corrupted or you want to start clean."
+                ),
+            )
+            do_reset = sync_mode.startswith("Full reset")
+            confirm = st.checkbox("I want to run the scraper now", key="confirm_scrape")
+            run_clicked = st.button("Run Scraper (Sync Data)", disabled=not confirm)
+            if st.button("Lock admin", key="admin_lock_btn"):
+                st.session_state['admin_unlocked'] = False
+                st.rerun()
 
 if run_clicked:
     progress_bar = st.sidebar.progress(0)
@@ -262,16 +286,19 @@ if page == "Analytics":
 
     with st.sidebar.expander("📅 Time", expanded=True):
         all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
-        default_seasons = all_seasons[:3]
+        default_seasons = all_seasons[:2]  # current + previous season
         selected_seasons = st.multiselect("Seasons", all_seasons, default=default_seasons)
 
         season_types = df['Type'].unique().tolist()
-        default_types = ['Regular'] if 'Regular' in season_types else [season_types[0]] if season_types else []
+        default_types = [t for t in ['Regular', 'Seeding'] if t in season_types]
+        if not default_types and season_types:
+            default_types = [season_types[0]]
         selected_types = st.multiselect("Season Type", season_types, default=default_types)
 
     with st.sidebar.expander("🏘️ Scope", expanded=True):
         age_categories = sorted(df['Age Category'].unique().tolist())
-        selected_ages = st.multiselect("Age Category", age_categories, default=age_categories)
+        default_ages = [a for a in ['U11', 'U13'] if a in age_categories] or age_categories
+        selected_ages = st.multiselect("Age Category", age_categories, default=default_ages)
 
         division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
         north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
@@ -450,16 +477,19 @@ elif page == "Tier 1 Dilution Analysis":
 
     with st.sidebar.expander("📅 Time", expanded=True):
         all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
-        default_seasons = all_seasons[:3]
+        default_seasons = all_seasons[:2]  # current + previous season
         selected_seasons = st.multiselect("Seasons", all_seasons, default=default_seasons)
 
         season_types = df['Type'].unique().tolist()
-        default_types = ['Regular'] if 'Regular' in season_types else [season_types[0]] if season_types else []
+        default_types = [t for t in ['Regular', 'Seeding'] if t in season_types]
+        if not default_types and season_types:
+            default_types = [season_types[0]]
         selected_types = st.multiselect("Season Type", season_types, default=default_types)
 
     with st.sidebar.expander("🏘️ Scope", expanded=True):
         age_categories = sorted(df['Age Category'].unique().tolist())
-        selected_ages = st.multiselect("Age Category", age_categories, default=age_categories)
+        default_ages = [a for a in ['U11', 'U13'] if a in age_categories] or age_categories
+        selected_ages = st.multiselect("Age Category", age_categories, default=default_ages)
 
         division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
         north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
@@ -524,11 +554,16 @@ elif page == "Tier 1 Dilution Analysis":
     tier1_counts = analysis_df[analysis_df['Is_Tier_1']].groupby(['Season', 'Community', 'Age Category'])['Team'].nunique().reset_index()
     tier1_counts.rename(columns={'Team': 'Tier1_Count'}, inplace=True)
     
-    # 5. Calculate OVERALL Performance per Community/Season/Age
-    # Only consider teams that have played games for performance stats to avoid skewing the average with 0-game teams
-    performance_df = non_elite_df[non_elite_df['GP'] > 0]
-    overall_stats = performance_df.groupby(['Season', 'Community', 'Age Category'])[selected_metric].mean().reset_index()
-    overall_stats.rename(columns={selected_metric: 'Overall_Performance'}, inplace=True)
+    # 5. Calculate OVERALL Performance per Community/Season/Age — weighted by GP.
+    # Naive mean(rate) gives a 3-game team the same weight as a 30-game team, which
+    # silently warps the community average. Sum the rate*GP and divide by sum(GP)
+    # so the result equals "total events / total games" across the community.
+    performance_df = non_elite_df[non_elite_df['GP'] > 0].copy()
+    performance_df['_w'] = performance_df[selected_metric] * performance_df['GP']
+    grouped = performance_df.groupby(['Season', 'Community', 'Age Category'])
+    overall_stats = grouped.agg(_w_sum=('_w', 'sum'), _gp_sum=('GP', 'sum')).reset_index()
+    overall_stats['Overall_Performance'] = overall_stats['_w_sum'] / overall_stats['_gp_sum']
+    overall_stats = overall_stats[['Season', 'Community', 'Age Category', 'Overall_Performance']]
     
     # 6. Merge Data
     merged_df = pd.merge(community_sizes, tier1_counts, on=['Season', 'Community', 'Age Category'], how='left')
@@ -622,22 +657,29 @@ elif page == "Tier 1 Dilution Analysis":
     if not season_age_thresholds:
         st.warning("Not enough data to identify 2-team thresholds (no communities with 2+ Tier 1 teams found in selected scope).")
     else:
-        # Define Groups relative to threshold
+        # Define Groups relative to threshold.
+        # Window sizes:
+        #   - "Just Below"    = 1 Tier 1, size in [threshold-3, threshold-1]  (3-team window)
+        #   - "Just Above"    = 2+ Tier 1, size in [threshold, threshold+1]   (2-team window)
+        #     (Widened from `size == threshold` exactly — that 0-team window often
+        #      produced cohorts of 1-3 communities, far too noisy to compare.)
+        #   - "Large"         = 2+ Tier 1, size > threshold+1
+        #   - "Small"         = 1 Tier 1, size < threshold-3
         def categorize_threshold(row):
             key = (row['Season'], row['Age Category'])
             if key not in season_age_thresholds:
                 return "Other"
-                
+
             threshold = int(season_age_thresholds[key])
             size = row['Total_Community_Teams']
             t1_count = row['Tier1_Count']
-            
+
             if t1_count == 1:
-                if size >= threshold - 3: 
+                if size >= threshold - 3:
                     return "Just Below Threshold (1 Team)"
                 return "Small (1 Team)"
             elif t1_count >= 2:
-                if size == threshold: 
+                if threshold <= size <= threshold + 1:
                     return "Just Above Threshold (Diluted)"
                 return "Large (Established)"
             return "Other"
@@ -666,8 +708,71 @@ elif page == "Tier 1 Dilution Analysis":
 
         merged_df['Label'] = merged_df.apply(get_label, axis=1)
 
+        # --- Headline result: the answer to "does the data support the claim?" ---
+        st.subheader("Headline result")
+        cohort_stats = (
+            merged_df[merged_df['Threshold Category'].isin([
+                "Small (1 Team)",
+                "Just Below Threshold (1 Team)",
+                "Just Above Threshold (Diluted)",
+                "Large (Established)",
+            ])]
+            .groupby('Threshold Category')['Overall_Performance']
+            .agg(['mean', 'count'])
+        )
+
+        def _stat(label):
+            if label in cohort_stats.index:
+                m = cohort_stats.loc[label, 'mean']
+                n = int(cohort_stats.loc[label, 'count'])
+                return m, n
+            return None, 0
+
+        small_m, small_n = _stat("Small (1 Team)")
+        below_m, below_n = _stat("Just Below Threshold (1 Team)")
+        diluted_m, diluted_n = _stat("Just Above Threshold (Diluted)")
+        large_m, large_n = _stat("Large (Established)")
+
+        # Delta of Diluted vs the average of its neighbours (Below + Large) — the
+        # direct test of the dilution claim.
+        neighbour_means = [m for m in (below_m, large_m) if m is not None]
+        delta_vs_neighbours = (
+            (diluted_m - sum(neighbour_means) / len(neighbour_means))
+            if (diluted_m is not None and neighbour_means) else None
+        )
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Small (1 T1)", f"{small_m:.3f}" if small_m is not None else "—",
+                  help=f"n = {small_n}")
+        c2.metric("Just Below", f"{below_m:.3f}" if below_m is not None else "—",
+                  help=f"n = {below_n}")
+        c3.metric(
+            "⚠️ Just Above (Diluted)",
+            f"{diluted_m:.3f}" if diluted_m is not None else "—",
+            delta=(f"{delta_vs_neighbours:+.3f} vs neighbours"
+                   if delta_vs_neighbours is not None else None),
+            delta_color="inverse",  # negative delta = red = dilution evidence
+            help=f"n = {diluted_n}",
+        )
+        c4.metric("Large (Established)", f"{large_m:.3f}" if large_m is not None else "—",
+                  help=f"n = {large_n}")
+
+        if delta_vs_neighbours is not None and diluted_n >= 3:
+            direction = "below" if delta_vs_neighbours < 0 else "above"
+            st.caption(
+                f"Diluted communities perform **{abs(delta_vs_neighbours):.3f} {direction}** "
+                f"the average of their neighbouring cohorts "
+                f"({selected_metric_label}, n={diluted_n} community-season-age observations)."
+            )
+        elif diluted_n < 3:
+            st.caption(
+                f"⚠️ Only {diluted_n} observation(s) in the Diluted cohort — "
+                "widen your Season/Age filters for a meaningful comparison."
+            )
+
         # --- Visualizations ---
-        
+        st.divider()
+
         # 1. The "Cliff" Comparison
         st.subheader("1. The 'Dilution Cliff' (Community-Wide)")
         
@@ -687,23 +792,34 @@ elif page == "Tier 1 Dilution Analysis":
         *   **Just Above Threshold**: Exactly at the threshold (2 Tier 1s).
         """)
         
-        # Filter for relevant categories
+        # Show all four cohorts so the visual comparison is complete. The keystone
+        # claim is that "Diluted" underperforms BOTH neighbouring cohorts (Small + Just Below).
         contrast_df = merged_df[merged_df['Threshold Category'].isin([
-            "Just Below Threshold (1 Team)", 
+            "Small (1 Team)",
+            "Just Below Threshold (1 Team)",
             "Just Above Threshold (Diluted)",
-            "Large (Established)"
+            "Large (Established)",
         ])].copy()
-        
+
         # Imports for manual plotting
         import plotly.graph_objects as go
         import numpy as np
-        
-        # Define Categories and Colors
-        categories = ["Just Below Threshold (1 Team)", "Just Above Threshold (Diluted)", "Large (Established)"]
+
+        # Categories ordered left→right by community size; colors:
+        #   Small / Just Below = green (healthy 1 T1)
+        #   Just Above (Diluted) = red (the hypothesis)
+        #   Large = blue (healthy 2+ T1)
+        categories = [
+            "Small (1 Team)",
+            "Just Below Threshold (1 Team)",
+            "Just Above Threshold (Diluted)",
+            "Large (Established)",
+        ]
         colors = {
-            "Just Below Threshold (1 Team)": "#2ca02c", 
-            "Just Above Threshold (Diluted)": "#d62728", 
-            "Large (Established)": "#1f77b4"
+            "Small (1 Team)":                 "#86c486",  # pale green
+            "Just Below Threshold (1 Team)":  "#2ca02c",  # green
+            "Just Above Threshold (Diluted)": "#d62728",  # red
+            "Large (Established)":            "#1f77b4",  # blue
         }
         
         # Map Categories to X-values for Jittering
@@ -730,7 +846,8 @@ elif page == "Tier 1 Dilution Analysis":
                 showlegend=True
             ))
             
-        # Add Scatter Points (Jittered with Labels)
+        # Add Scatter Points (Jittered; hover-only — per-point labels overlap
+        # to the point of illegibility once a cohort has 5+ communities).
         for cat in categories:
             cat_data = contrast_df[contrast_df['Threshold Category'] == cat]
             if cat_data.empty: continue
@@ -738,14 +855,17 @@ elif page == "Tier 1 Dilution Analysis":
             fig_cliff.add_trace(go.Scatter(
                 x=cat_data['X_Jitter'],
                 y=cat_data['Overall_Performance'],
-                mode='markers+text',
-                text=cat_data['Label'],
-                textposition='top center',
-                marker=dict(color=colors[cat], size=6),
+                mode='markers',
+                marker=dict(color=colors[cat], size=7, opacity=0.75,
+                            line=dict(width=0.5, color='white')),
                 name=cat,
-                showlegend=False, # Legend already shown by Box
-                hovertext=cat_data.apply(lambda row: f"{row['Community']} ({row['Season']})<br>Teams: {row['Total_Community_Teams']}<br>Tier 1: {row['Tier1_Count']}", axis=1),
-                hoverinfo='text+y'
+                showlegend=False,  # Legend already shown by Box
+                hovertext=cat_data.apply(
+                    lambda row: f"{row['Community']} ({row['Season']}) — {row['Age Category']}<br>"
+                                f"Teams: {row['Total_Community_Teams']}, Tier 1: {row['Tier1_Count']}",
+                    axis=1,
+                ),
+                hoverinfo='text+y',
             ))
 
         # Update Layout
