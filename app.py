@@ -20,11 +20,36 @@ except ImportError:
 # Page Config
 st.set_page_config(page_title="Hockey Calgary Analytics", layout="wide")
 
-st.warning("Disclaimer: this is a personal interest project and I don't stand behind any of it - this is a subject that I'm personally interested in and it's also a fun development project but I'm not accountable to anyone for it's accuracy")
-
 # Initialize Database (Ensure tables exist). `engine` is imported from database.py
 # and reads DATABASE_URL from the environment / .env.
 init_db()
+
+
+def render_footer():
+    """Disclaimer + project context, rendered at the bottom of every page."""
+    st.divider()
+    st.caption(
+        "Personal-interest project — not an authoritative source. Data is scraped from "
+        "Hockey Calgary, RAMP (Alberta One), and TeamLinkt; accuracy depends on what "
+        "those sources publish. Built for fun, not accountability."
+    )
+
+
+# Stable color mapping so a community gets the same color in every chart on
+# every page. Anything not in the map falls back to a default plotly color.
+COMMUNITY_COLORS = {
+    "Bow River":   "#1f77b4",  # blue
+    "Bow Valley":  "#2ca02c",  # green
+    "Glenlake":    "#d62728",  # red
+    "Knights":     "#9467bd",  # purple
+    "McKnight":    "#ff7f0e",  # orange
+    "North West":  "#17becf",  # cyan
+    "Raiders":     "#8c564b",  # brown
+    "Southwest":   "#e377c2",  # pink
+    "Springbank":  "#bcbd22",  # olive
+    "Trails West": "#7f7f7f",  # grey
+    "Wolverines":  "#aec7e8",  # light blue
+}
 
 
 def get_last_scrape():
@@ -55,8 +80,13 @@ def get_previous_scrape(before_id):
 
 # --- Helper Functions ---
 
+@st.cache_data
 def load_data():
-    """Loads data from the database into a Pandas DataFrame."""
+    """Loads data from the database into a Pandas DataFrame.
+
+    Cached across reruns until invalidated (the scraper button calls
+    st.cache_data.clear() after a successful sync).
+    """
     # Note: community joins directly from standings.community_id (denormalized at scrape time).
     # Older rows fall back to teams.community_id via LEFT JOIN + COALESCE so historical
     # records that pre-date the column still resolve.
@@ -86,28 +116,19 @@ def load_data():
     """
     try:
         df = pd.read_sql(query, engine)
-        
-        # Feature Engineering
-        # Handle division by zero for teams with 0 GP
-        df['Win %'] = df.apply(lambda row: row['W'] / row['GP'] if row['GP'] > 0 else 0.0, axis=1)
-        df['Points %'] = df.apply(lambda row: row['PTS'] / (row['GP'] * 2) if row['GP'] > 0 else 0.0, axis=1)
-        df['Goal Diff/Game'] = df.apply(lambda row: row['Diff'] / row['GP'] if row['GP'] > 0 else 0.0, axis=1)
-        
-        # Extract Age Category (U9, U11, etc.) from League Name
-        def get_age_category(league_name):
-            if 'U9' in league_name: return 'U9'
-            if 'U11' in league_name: return 'U11'
-            if 'U13' in league_name: return 'U13'
-            if 'U15' in league_name: return 'U15'
-            if 'U18' in league_name: return 'U18'
-            if 'U21' in league_name: return 'U21'
-            return 'Other'
-            
-        df['Age Category'] = df['League'].apply(get_age_category)
-        
-        # Exclude Girls Hockey Calgary
+
+        # Vectorized rate metrics (NaN-safe via .where; teams with GP=0 get 0).
+        gp_positive = df['GP'] > 0
+        df['Win %'] = (df['W'] / df['GP']).where(gp_positive, 0.0)
+        df['Points %'] = (df['PTS'] / (df['GP'] * 2)).where(gp_positive, 0.0)
+        df['Goal Diff/Game'] = (df['Diff'] / df['GP']).where(gp_positive, 0.0)
+
+        # Pull the age category (U9, U11, ..., U21) out of the league name via regex.
+        df['Age Category'] = df['League'].str.extract(r'(U\d{1,2})', expand=False).fillna('Other')
+
+        # Exclude Girls Hockey Calgary from the headline analytics.
         df = df[df['Community'] != 'Girls Hockey Calgary']
-        
+
         return df
     except Exception as e:
         st.error(f"Error loading data: {e}")
@@ -153,13 +174,24 @@ with st.sidebar.expander("⚙️ Data Sync"):
         "Runs the scraper against Hockey Calgary, RAMP, and TeamLinkt. "
         "Takes ~10-15 minutes; the page will block while it runs."
     )
+    sync_mode = st.radio(
+        "Mode",
+        ["Update existing data", "Full reset (rebuild from scratch)"],
+        index=0,
+        help=(
+            "Update is safe and additive — existing standings stay, new/changed rows "
+            "get upserted. Full reset drops everything first; only use it if the DB "
+            "is corrupted or you want to start clean."
+        ),
+    )
+    do_reset = sync_mode.startswith("Full reset")
     confirm = st.checkbox("I want to run the scraper now", key="confirm_scrape")
     run_clicked = st.button("Run Scraper (Sync Data)", disabled=not confirm)
 
 if run_clicked:
     progress_bar = st.sidebar.progress(0)
     status_text = st.sidebar.empty()
-    
+
     def update_progress(pct, msg):
         progress_bar.progress(pct)
         status_text.text(msg)
@@ -168,9 +200,9 @@ if run_clicked:
         # Capture stdout to show progress
         old_stdout = sys.stdout
         sys.stdout = mystdout = StringIO()
-        
+
         try:
-            sync_data(reset=True, progress_callback=update_progress)
+            sync_data(reset=do_reset, progress_callback=update_progress)
             st.success("Sync Complete!")
         except Exception as e:
             st.error(f"An error occurred: {e}")
@@ -191,77 +223,78 @@ if df.empty:
     st.warning("No data found. Please run the scraper first.")
     st.stop()
 
+# Data-quality / coverage panel — meta info, available on every page from the sidebar.
+with st.sidebar.expander("ℹ️ About this data"):
+    st.caption(
+        f"{len(df):,} team-season records across {df['Season'].nunique()} seasons "
+        f"and {df['Community'].nunique()} communities. "
+        "Coverage by Season × Type × Age below."
+    )
+    completeness = df.groupby(['Season', 'Type', 'Age Category']).size().unstack(fill_value=0)
+    if HAS_MATPLOTLIB:
+        st.dataframe(completeness.style.background_gradient(cmap="Greens", axis=None))
+    else:
+        st.dataframe(completeness)
+
 if page == "Analytics":
-    # Export
-    st.sidebar.header("Export Data")
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.sidebar.download_button(
-        label="Download All Data (CSV)",
-        data=csv,
-        file_name='hockey_calgary_all_data.csv',
-        mime='text/csv',
+    st.title("🏒 Hockey Calgary Analytics")
+    st.markdown(
+        "Performance data for Calgary minor hockey communities, 2020-2026. "
+        "Filter by season, age, and community in the sidebar; see the "
+        "**Tier 1 Dilution Analysis** tab for the hypothesis this project was built to test."
     )
 
-    # Filters
+    # Filters — grouped by purpose. Time + Scope are the common case;
+    # League/Team live behind a "Refine" expander to keep the sidebar scannable.
     st.sidebar.header("Filters")
 
-    # Season Filter
-    all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
-    default_seasons = ['2025-2026'] if '2025-2026' in all_seasons else [all_seasons[0]] if all_seasons else []
-    selected_seasons = st.sidebar.multiselect("Select Seasons", all_seasons, default=default_seasons)
-
-    # Season Type Filter
-    season_types = df['Type'].unique().tolist()
-    default_types = ['Seeding'] if 'Seeding' in season_types else [season_types[0]] if season_types else []
-    selected_types = st.sidebar.multiselect("Season Type", season_types, default=default_types)
-
-    # Age Category Filter
-    age_categories = sorted(df['Age Category'].unique().tolist())
-    default_ages = [age for age in ['U11', 'U13'] if age in age_categories]
-    selected_ages = st.sidebar.multiselect("Age Category", age_categories, default=default_ages)
-
-    # Community Filter
-    all_communities = sorted(df['Community'].unique().tolist())
-
-    # Division Selector
-    division = st.sidebar.radio("Hockey Calgary Division", ["All", "North", "South"], index=0)
-
-    north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
-    south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
-
-    if division == "North":
-        community_options = [c for c in all_communities if c in north_communities]
-    elif division == "South":
-        community_options = [c for c in all_communities if c in south_communities]
-    else:
-        community_options = all_communities
-
-    selected_communities = st.sidebar.multiselect("Select Communities", community_options, default=community_options)
-
-    # League Filter
-    available_leagues = sorted(df[
-        (df['Season'].isin(selected_seasons)) &
-        (df['Type'].isin(selected_types)) & 
-        (df['Age Category'].isin(selected_ages))
-    ]['League'].unique().tolist())
-    selected_leagues = st.sidebar.multiselect("Select Leagues (Optional)", available_leagues, default=[])
-
-    # Team Filter (Optional)
-    # Filter teams based on selected communities to avoid too many options
-    available_teams = sorted(df[df['Community'].isin(selected_communities)]['Team'].unique().tolist())
-    selected_teams = st.sidebar.multiselect("Select Teams (Optional)", available_teams, default=[])
-
-    # Metric Selector
+    # Metric is always-visible at the top — it changes what the whole page is about.
     metric_map = {
         'Points': 'PTS',
         'Wins': 'W',
         'Losses': 'L',
         'Goal Diff': 'Diff',
         'Goals For': 'GF',
-        'Goals Against': 'GA'
+        'Goals Against': 'GA',
     }
-    selected_metric_label = st.sidebar.selectbox("Select Metric", list(metric_map.keys()))
+    selected_metric_label = st.sidebar.selectbox("Metric", list(metric_map.keys()))
     selected_metric = metric_map[selected_metric_label]
+
+    with st.sidebar.expander("📅 Time", expanded=True):
+        all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
+        default_seasons = all_seasons[:3]
+        selected_seasons = st.multiselect("Seasons", all_seasons, default=default_seasons)
+
+        season_types = df['Type'].unique().tolist()
+        default_types = ['Regular'] if 'Regular' in season_types else [season_types[0]] if season_types else []
+        selected_types = st.multiselect("Season Type", season_types, default=default_types)
+
+    with st.sidebar.expander("🏘️ Scope", expanded=True):
+        age_categories = sorted(df['Age Category'].unique().tolist())
+        selected_ages = st.multiselect("Age Category", age_categories, default=age_categories)
+
+        division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
+        north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
+        south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
+        all_communities = sorted(df['Community'].unique().tolist())
+        if division == "North":
+            community_options = [c for c in all_communities if c in north_communities]
+        elif division == "South":
+            community_options = [c for c in all_communities if c in south_communities]
+        else:
+            community_options = all_communities
+        selected_communities = st.multiselect("Communities", community_options, default=community_options)
+
+    with st.sidebar.expander("🔬 Refine (optional)", expanded=False):
+        available_leagues = sorted(df[
+            (df['Season'].isin(selected_seasons)) &
+            (df['Type'].isin(selected_types)) &
+            (df['Age Category'].isin(selected_ages))
+        ]['League'].unique().tolist())
+        selected_leagues = st.multiselect("Leagues", available_leagues, default=[])
+
+        available_teams = sorted(df[df['Community'].isin(selected_communities)]['Team'].unique().tolist())
+        selected_teams = st.multiselect("Teams", available_teams, default=[])
 
     # --- Apply Filters ---
     filtered_df = df.copy()
@@ -284,13 +317,15 @@ if page == "Analytics":
     if selected_teams:
         filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
 
-    # Export Filtered Data
+    # Single download — defaults to the current filtered view; toggle to get everything.
     st.sidebar.markdown("---")
-    csv_filtered = filtered_df.to_csv(index=False).encode('utf-8')
+    include_all = st.sidebar.checkbox("Include all rows (ignore filters)", value=False, key="dl_all")
+    export_df = df if include_all else filtered_df
+    export_name = 'hockey_calgary_all_data.csv' if include_all else 'hockey_calgary_filtered_data.csv'
     st.sidebar.download_button(
-        label="Download Filtered Data (CSV)",
-        data=csv_filtered,
-        file_name='hockey_calgary_filtered_data.csv',
+        label=f"Download CSV ({len(export_df):,} rows)",
+        data=export_df.to_csv(index=False).encode('utf-8'),
+        file_name=export_name,
         mime='text/csv',
     )
 
@@ -298,22 +333,12 @@ if page == "Analytics":
         st.warning("No data matches the selected filters.")
         st.stop()
 
-    # --- Data Completeness Check ---
-    st.header("Data Completeness Check")
-    with st.expander("View Data Completeness Matrix"):
-        if not df.empty:
-            # Group by Season, Type, and Age Category to count records
-            completeness = df.groupby(['Season', 'Type', 'Age Category']).size().unstack(fill_value=0)
-            
-            # Display as a heatmap-style dataframe
-            if HAS_MATPLOTLIB:
-                st.dataframe(completeness.style.background_gradient(cmap="Greens", axis=None))
-            else:
-                st.dataframe(completeness)
-            
-            st.caption("Numbers represent the count of team records found for each Season/Type/Age Group combination.")
-        else:
-            st.warning("No data available to check.")
+    # --- Current-view summary ---
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Teams", filtered_df['Team'].nunique())
+    m2.metric("Leagues", filtered_df['League'].nunique())
+    m3.metric("Seasons", filtered_df['Season'].nunique())
+    m4.metric("Communities", filtered_df['Community'].nunique())
 
     # --- Main Content ---
 
@@ -327,10 +352,11 @@ if page == "Analytics":
     trend_df = filtered_df.groupby(['Season', 'Community'])[selected_metric].mean().reset_index()
 
     fig_trend = px.line(
-        trend_df, 
-        x='Season', 
-        y=selected_metric, 
-        color='Community', 
+        trend_df,
+        x='Season',
+        y=selected_metric,
+        color='Community',
+        color_discrete_map=COMMUNITY_COLORS,
         markers=True,
         title=f"Average {selected_metric_label} over Seasons",
         category_orders={"Season": sorted(filtered_df['Season'].unique())}
@@ -393,59 +419,59 @@ if page == "Analytics":
 
 
 elif page == "Tier 1 Dilution Analysis":
-    st.header("📉 Systemic Dilution Analysis")
-    st.markdown("""
-    This analysis investigates the **"Systemic Dilution Effect"** caused by tiering thresholds.
-    
-    **Hypothesis:** When an association grows just large enough to require **two** Tier 1 teams (instead of one), 
-    it doesn't just hurt the Tier 1 teams. It "starves" every subsequent tier of talent, causing a drop in 
-    **overall performance across the entire age group** for that community.
-    """)
+    st.title("📉 Tier 1 Dilution Analysis")
+    st.markdown(
+        "**The claim:** communities that just barely cross the threshold for fielding "
+        "a *second* Tier 1 team underperform — not just at Tier 1, but **across every tier** "
+        "in that age group. The talent pool gets split too thin."
+    )
+    with st.expander("How this is calculated"):
+        st.markdown(
+            "For each (Season × Age Category), the scraper infers a *threshold* — the team count "
+            "above which an association is expected to field 2+ Tier 1 teams. Communities are "
+            "then bucketed:\n\n"
+            "- **Just Below Threshold** — 1-3 teams shy of the threshold, fielding 1 Tier 1\n"
+            "- **Just Above Threshold (Diluted)** — exactly at the threshold, forced to field 2 Tier 1s\n"
+            "- **Large (Established)** — well above the threshold, comfortably fielding 2+\n\n"
+            "Performance is averaged across **all teams** in the age group (not just Tier 1), "
+            "so the metric captures community-wide impact."
+        )
     
     # --- Filters ---
     st.sidebar.header("Analysis Filters")
-    
-    # Season Filter
-    all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
-    default_seasons = ['2025-2026'] if '2025-2026' in all_seasons else [all_seasons[0]] if all_seasons else []
-    selected_seasons = st.sidebar.multiselect("Select Seasons", all_seasons, default=default_seasons)
 
-    # Season Type Filter
-    season_types = df['Type'].unique().tolist()
-    default_types = ['Seeding'] if 'Seeding' in season_types else [season_types[0]] if season_types else []
-    selected_types = st.sidebar.multiselect("Season Type", season_types, default=default_types)
-
-    # Age Category Filter
-    age_categories = sorted(df['Age Category'].unique().tolist())
-    default_ages = [age for age in ['U11', 'U13'] if age in age_categories]
-    selected_ages = st.sidebar.multiselect("Age Category", age_categories, default=default_ages)
-
-    # Community Filter
-    all_communities = sorted(df['Community'].unique().tolist())
-    
-    # Division Selector
-    division = st.sidebar.radio("Hockey Calgary Division", ["All", "North", "South"], index=0)
-
-    north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
-    south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
-
-    if division == "North":
-        community_options = [c for c in all_communities if c in north_communities]
-    elif division == "South":
-        community_options = [c for c in all_communities if c in south_communities]
-    else:
-        community_options = all_communities
-        
-    selected_communities = st.sidebar.multiselect("Select Communities", community_options, default=community_options)
-
-    # Metric Selector
     metric_map = {
         'Points %': 'Points %',
         'Win %': 'Win %',
-        'Goal Diff/Game': 'Goal Diff/Game'
+        'Goal Diff/Game': 'Goal Diff/Game',
     }
-    selected_metric_label = st.sidebar.selectbox("Select Performance Metric", list(metric_map.keys()))
+    selected_metric_label = st.sidebar.selectbox("Performance Metric", list(metric_map.keys()))
     selected_metric = metric_map[selected_metric_label]
+
+    with st.sidebar.expander("📅 Time", expanded=True):
+        all_seasons = sorted(df['Season'].unique().tolist(), reverse=True)
+        default_seasons = all_seasons[:3]
+        selected_seasons = st.multiselect("Seasons", all_seasons, default=default_seasons)
+
+        season_types = df['Type'].unique().tolist()
+        default_types = ['Regular'] if 'Regular' in season_types else [season_types[0]] if season_types else []
+        selected_types = st.multiselect("Season Type", season_types, default=default_types)
+
+    with st.sidebar.expander("🏘️ Scope", expanded=True):
+        age_categories = sorted(df['Age Category'].unique().tolist())
+        selected_ages = st.multiselect("Age Category", age_categories, default=age_categories)
+
+        division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
+        north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
+        south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
+        all_communities = sorted(df['Community'].unique().tolist())
+        if division == "North":
+            community_options = [c for c in all_communities if c in north_communities]
+        elif division == "South":
+            community_options = [c for c in all_communities if c in south_communities]
+        else:
+            community_options = all_communities
+        selected_communities = st.multiselect("Communities", community_options, default=community_options)
 
     # --- Data Processing ---
     
@@ -460,7 +486,14 @@ elif page == "Tier 1 Dilution Analysis":
     if analysis_df.empty:
         st.warning("No data matches the selected filters.")
         st.stop()
-    
+
+    # --- Current-view summary ---
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Teams", analysis_df['Team'].nunique())
+    m2.metric("Leagues", analysis_df['League'].nunique())
+    m3.metric("Seasons", analysis_df['Season'].nunique())
+    m4.metric("Communities", analysis_df['Community'].nunique())
+
     # 2. Identify Elite (AA/HADP) to exclude from Community Size Count
     def is_elite(league_name):
         name_upper = league_name.upper()
@@ -761,6 +794,7 @@ elif page == "Tier 1 Dilution Analysis":
             x='Tiering_Aggressiveness',
             y='Overall_Performance',
             color='Community',
+            color_discrete_map=COMMUNITY_COLORS,
             text='Season_Label',
             markers=True,
             hover_data={
@@ -786,4 +820,7 @@ elif page == "Tier 1 Dilution Analysis":
     # 5. Data Table
     with st.expander("View Analysis Data"):
         st.dataframe(merged_df.sort_values(by='Total_Community_Teams'))
+
+
+render_footer()
 
