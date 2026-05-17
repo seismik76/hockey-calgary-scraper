@@ -9,9 +9,12 @@ import { log } from './log';
 // status='failed' so the UI stops showing a permanent "scrape in progress"
 // banner and the rate-limit / "already running" checks don't get wedged.
 //
-// Real scrapes take 10–15 min, so 30 min is generous without being so long
-// that a genuine zombie sits visible for hours.
-const STALE_THRESHOLD_MS = 30 * 60 * 1000;
+// Calibrating this is tricky: 15 min covers a typical local run, but real
+// scrapes on Render have been observed at 30+ min — the upstream sites are
+// the bottleneck, not our CPU. We use 90 min as a generous upper bound. A
+// genuine zombie still clears within a couple of hours; a healthy slow
+// scrape never gets misclassified.
+const STALE_THRESHOLD_MS = 90 * 60 * 1000;
 
 /** Marks any `running` scrape_runs older than the threshold as `failed`.
  *  Returns the number of rows updated (usually 0). Cheap when there's nothing
