@@ -38,7 +38,6 @@ type Props = {
   state: DilutionFilterState;
   setState: (next: DilutionFilterState) => void;
   defaultState: DilutionFilterState;
-  stickyTop?: number;
   allSeasons: string[];
   allTypes: string[];
   allAges: string[];
@@ -55,7 +54,7 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
     overflowY: 'auto',
-    position: 'sticky',
+    height: '100%',
     boxSizing: 'border-box',
   },
   header: {
@@ -159,7 +158,6 @@ export function DilutionFilters({
   state,
   setState,
   defaultState,
-  stickyTop = 0,
   allSeasons,
   allTypes,
   allAges,
@@ -167,10 +165,6 @@ export function DilutionFilters({
   allCommunities,
 }: Props) {
   const s = useStyles();
-  const asideStyle = {
-    top: stickyTop,
-    height: `calc(100vh - ${stickyTop}px)`,
-  };
   const update = <K extends keyof DilutionFilterState>(
     key: K,
     value: DilutionFilterState[K],
@@ -180,7 +174,7 @@ export function DilutionFilters({
   const activeCount = countActiveFilters(state, defaultState);
 
   return (
-    <aside className={s.aside} style={asideStyle}>
+    <aside className={s.aside}>
       <div className={s.header}>
         <div className={s.headerLeft}>
           <Filter20Regular />

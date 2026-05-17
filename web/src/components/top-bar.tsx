@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { type ReactNode } from 'react';
 import {
   Badge,
+  Button,
   Tab,
   TabList,
   Title3,
   makeStyles,
   tokens,
 } from '@fluentui/react-components';
+import { Navigation20Regular } from '@fluentui/react-icons';
 
 export type TopBarPage = 'analytics' | 'dilution';
 
@@ -75,21 +77,55 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXS,
     flexWrap: 'nowrap',
   },
+  // Hamburger button — visible only on narrow viewports where the sidebar
+  // collapses to a drawer.
+  menuButton: {
+    display: 'none',
+    '@media (max-width: 900px)': {
+      display: 'inline-flex',
+    },
+  },
+  // The Analytics/Dilution tabs take up too much horizontal space at narrow
+  // widths; hide their text labels (or whole bar) on the smallest viewports.
+  tabsWrap: {
+    '@media (max-width: 640px)': {
+      display: 'none',
+    },
+  },
+  // Status badges crowd the right side on mobile; hide them when there's no room.
+  badgesWrap: {
+    '@media (max-width: 640px)': {
+      display: 'none',
+    },
+  },
 });
 
 type Props = {
   active: TopBarPage;
   lastUpdated: { finishedAt: Date | null; standingsCount: number | null } | null;
   rightSlot?: ReactNode;
+  /** When set, a hamburger button appears on narrow viewports and calls this
+   *  on tap. The content component owns the drawer state. */
+  onMenuClick?: () => void;
 };
 
-export function TopBar({ active, lastUpdated, rightSlot }: Props) {
+export function TopBar({ active, lastUpdated, rightSlot, onMenuClick }: Props) {
   const s = useStyles();
   const router = useRouter();
 
   return (
     <header className={s.bar}>
       <div className={s.left}>
+        {onMenuClick && (
+          <Button
+            className={s.menuButton}
+            appearance="subtle"
+            size="small"
+            icon={<Navigation20Regular />}
+            aria-label="Open filters"
+            onClick={onMenuClick}
+          />
+        )}
         <Link href="/" className={s.brand}>
           <span className={s.monogram} aria-hidden>
             HC
@@ -98,20 +134,22 @@ export function TopBar({ active, lastUpdated, rightSlot }: Props) {
             Hockey Calgary Analytics
           </Title3>
         </Link>
-        <TabList
-          selectedValue={active}
-          appearance="subtle"
-          size="medium"
-          onTabSelect={(_, data) =>
-            router.push(data.value === 'dilution' ? '/dilution' : '/')
-          }
-        >
-          <Tab value="analytics">Analytics</Tab>
-          <Tab value="dilution">Tier 1 Dilution</Tab>
-        </TabList>
+        <div className={s.tabsWrap}>
+          <TabList
+            selectedValue={active}
+            appearance="subtle"
+            size="medium"
+            onTabSelect={(_, data) =>
+              router.push(data.value === 'dilution' ? '/dilution' : '/')
+            }
+          >
+            <Tab value="analytics">Analytics</Tab>
+            <Tab value="dilution">Tier 1 Dilution</Tab>
+          </TabList>
+        </div>
       </div>
       <div className={s.right}>
-        <div className={s.badges}>
+        <div className={`${s.badges} ${s.badgesWrap}`}>
           {lastUpdated?.finishedAt ? (
             <Badge appearance="tint" color="informative">
               Updated {new Date(lastUpdated.finishedAt).toLocaleDateString()}

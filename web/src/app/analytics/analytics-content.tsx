@@ -31,8 +31,6 @@ type Props = {
   initialRun: ScraperRun | null;
 };
 
-const TOPBAR_HEIGHT = 64;
-
 const useStyles = makeStyles({
   shell: {
     display: 'grid',
@@ -44,12 +42,61 @@ const useStyles = makeStyles({
     `,
     minHeight: '100vh',
     backgroundColor: tokens.colorNeutralBackground2,
+    '@media (max-width: 900px)': {
+      gridTemplateColumns: 'minmax(0, 1fr)',
+      gridTemplateAreas: `
+        "topbar"
+        "main"
+      `,
+    },
   },
   topbar: {
     gridArea: 'topbar',
   },
   sidebar: {
     gridArea: 'sidebar',
+    position: 'sticky',
+    top: '64px',
+    height: 'calc(100vh - 64px)',
+    '@media (max-width: 900px)': {
+      position: 'fixed',
+      top: '64px',
+      left: 0,
+      bottom: 0,
+      width: '320px',
+      height: 'auto',
+      zIndex: 30,
+      transform: 'translateX(-100%)',
+      transition: 'transform 0.22s ease',
+      boxShadow: tokens.shadow16,
+    },
+  },
+  sidebarOpen: {
+    '@media (max-width: 900px)': {
+      transform: 'translateX(0)',
+    },
+  },
+  backdrop: {
+    display: 'none',
+    '@media (max-width: 900px)': {
+      display: 'block',
+      position: 'fixed',
+      top: '64px',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.42)',
+      zIndex: 25,
+      opacity: 0,
+      pointerEvents: 'none',
+      transition: 'opacity 0.22s ease',
+    },
+  },
+  backdropOpen: {
+    '@media (max-width: 900px)': {
+      opacity: 1,
+      pointerEvents: 'auto',
+    },
   },
   mainCol: {
     gridArea: 'main',
@@ -127,6 +174,8 @@ export function AnalyticsContent({
   );
 
   const [state, setState] = useState<FilterState>(defaultState);
+  const [navOpen, setNavOpen] = useState(false);
+  const closeNav = () => setNavOpen(false);
 
   const availableLeagues = useMemo(() => {
     const partial = rows.filter(
@@ -170,6 +219,7 @@ export function AnalyticsContent({
         <TopBar
           active="analytics"
           lastUpdated={lastUpdated}
+          onMenuClick={() => setNavOpen(true)}
           rightSlot={
             <>
               <CoveragePopover rows={rows} />
@@ -184,9 +234,14 @@ export function AnalyticsContent({
         />
       </div>
 
-      <div className={s.sidebar}>
+      <div
+        className={`${s.backdrop} ${navOpen ? s.backdropOpen : ''}`}
+        onClick={closeNav}
+        aria-hidden
+      />
+
+      <div className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
         <FiltersPanel
-          stickyTop={TOPBAR_HEIGHT}
           state={state}
           setState={setState}
           defaultState={defaultState}

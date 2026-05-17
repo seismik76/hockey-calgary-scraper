@@ -1,136 +1,169 @@
-# Hockey Calgary Analytics & Scraper
+# Hockey Calgary Analytics
 
-A comprehensive data analytics platform for minor hockey in Calgary. This tool scrapes historical performance data from **Hockey Calgary** and **Alberta One**, stores it in a local database, and provides an interactive dashboard to analyze community performance and systemic trends.
+Community-level analytics for Calgary minor hockey, 2020–present. Scrapes
+standings from Hockey Calgary, Alberta One (RAMP), and TeamLinkt; stores them
+in Postgres; surfaces them in a Next.js dashboard with two main views — a
+filterable analytics page and a tier-1 dilution analysis.
 
-## 🚀 Features
+Live at https://hockey-calgary-scraper.onrender.com.
 
-### 1. Robust Data Scraping
-*   **Multi-Source Support**: Scrapes data from:
-    *   **Hockey Calgary**: U9, U13, U15, U18 (TeamLinkt & Legacy backends).
-    *   **Alberta One**: U11 (RAMP Interactive backend).
-*   **Historical Data**: Collects standings (GP, W, L, T, PTS, GF, GA, Diff) across multiple seasons.
-*   **Smart Mapping**: Automatically maps team names to communities (e.g., "Bow Valley 1" -> "Bow Valley") with custom overrides via `community_map.json`.
-*   **Progress Tracking**: Real-time progress bars and status updates during data sync.
+> Personal-interest project. Not an authoritative source — the underlying
+> data's accuracy depends on what the upstream sites publish.
 
-### 2. Interactive Analytics Dashboard
-The project includes a powerful **Streamlit** dashboard with two dedicated analysis modules:
+## Architecture
 
-#### 📊 General Analytics
-*   **Trend Analysis**: View performance trends over time for specific communities.
-*   **Head-to-Head**: Compare multiple communities directly.
-*   **Data Export**: Download full or filtered datasets to CSV.
-
-#### 📉 Systemic Dilution Analysis (New!)
-*   **The "Dilution Cliff"**: Visualizes the performance drop-off that occurs when a community grows just large enough to mandate a second Tier 1 team.
-*   **Threshold Detection**: Automatically identifies the "2-team threshold" for each age group.
-*   **Tiering Aggressiveness**: Measures the impact of "aggressive tiering" (% of teams in Tier 1) on overall community performance.
-*   **Visualizations**:
-    *   **Cliff Box Plots**: Compares performance across three distinct cohorts:
-        *   **1 Tier 1 Team**: Communities of any size that fielded only a single Tier 1 team.
-        *   **Smallest Requiring 2 Tier 1**: Communities at the specific size threshold where a second Tier 1 team is mandated.
-        *   **Large Communities**: Larger associations that comfortably support two or more Tier 1 teams.
-    *   **Yearly Trends**: Color-coded strip plots showing performance by category over time.
-    *   **Aggressiveness Scatter**: Regression analysis of Tier 1 ratios vs performance.
-
-## 🛠️ Setup & Installation
-
-1.  **Prerequisites**:
-    *   Python 3.8+
-    *   Git
-
-2.  **Clone the Repository**:
-    ```bash
-    git clone https://github.com/seismik76/hockey-calgary-scraper.git
-    cd hockey-calgary-scraper
-    ```
-
-3.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-## 💻 Usage
-
-### 1. Launch the Dashboard (Recommended)
-The easiest way to use the tool is via the web interface.
-
-```bash
-streamlit run app.py
+```
+┌─────────────────────────┐         ┌─────────────────────────┐
+│   web/  (Next.js 16)    │   SQL   │  Postgres (Neon in      │
+│   Fluent UI v9          │ ──────► │  prod, Docker locally)  │
+│   Drizzle ORM           │         └─────────────────────────┘
+└──────────┬──────────────┘                      ▲
+           │ POST /api/scraper/run               │
+           │ (admin-gated; spawns python3        │
+           │  detached)                          │
+           ▼                                     │
+┌─────────────────────────┐                      │
+│   scraper.py  (Python)  │ ─── SQLAlchemy ──────┘
+│   requests + bs4 +      │
+│   pdfplumber            │
+└─────────────────────────┘
 ```
 
-This will open `http://localhost:8501` in your browser.
+- **Web app (`web/`)** — Next.js 16 App Router + Fluent UI v9 + Drizzle.
+  Server components read Postgres directly; client components handle filter
+  state and charts (Recharts). Deployed as a Docker image to Render.
+- **Scraper (`scraper.py`)** — Python script invoked manually via the web
+  app's admin gate. Writes rows to `standings` + `scrape_runs`. Same Postgres
+  as the web app, so changes are visible on next page load.
+- **Schema (`models.py`, `alembic/`)** — SQLAlchemy models, Alembic
+  migrations. The Drizzle schema in `web/src/lib/db/schema.ts` mirrors the
+  Python models; Alembic owns DDL.
 
-### 2. Sync Data
-*   **Via Dashboard**: Click the **"Run Scraper (Sync Data)"** button in the sidebar.
-*   **Via Command Line**:
-    ```bash
-    python scraper.py
-    ```
+## Local development
 
-## 📂 Project Structure
+### Prereqs
 
-*   `app.py`: Main Streamlit application containing the dashboard logic and visualizations.
-*   `scraper.py`: Core scraping logic for Hockey Calgary and Alberta One.
-*   `hockey_calgary.db`: SQLite database storing all scraped data (created automatically).
-*   `utilities/`: Helper scripts for tiering logic and data parsing.
-*   `community_map.json`: Configuration file for mapping team names to community associations.
+- Node 20+ (we test on 22)
+- Python 3.11+
+- Docker (for local Postgres) — or any Postgres you prefer
 
-## 🔍 Methodology
+### Setup
 
-*   **Dilution Hypothesis**: The "Systemic Dilution" analysis tests the theory that splitting the top talent pool into two teams (when an association barely meets the size threshold) dilutes talent enough to negatively impact the *entire* age group's performance, not just the top teams.
-*   **Threshold Calculation**: The system dynamically calculates the "2-team threshold" based on historical data for each age category.
+1. **Postgres** — start the bundled docker compose stack:
 
-## 📄 License
-[MIT License](LICENSE)
-- Fetch all leagues for U9, U11, U13, U15.
-- Handle data from Hockey Calgary (Legacy), RAMP, and TeamLinkt.
-- Update the database with the latest stats.
+   ```sh
+   docker compose up -d
+   ```
 
-### 3. Maintenance & Inspection
+   Brings up Postgres 16 at `localhost:5432`, user `hockey`, DB
+   `hockey_calgary`. Tear down with `docker compose down`.
 
-The project includes various scripts for debugging and maintenance, organized in the `scripts/` directory.
+2. **Env vars** — create a `.env` in the repo root (`.gitignore` excludes
+   it):
 
-- **Export Data (CLI)**:
-  ```bash
-  python scripts/maintenance/export_data.py
-  ```
-- **Debug Legacy Scraping**:
-  ```bash
-  python scripts/inspection/debug_legacy.py
-  ```
-- **Clean/Fix Community Names**:
-  ```bash
-  python scripts/maintenance/fix_communities.py
-  ```
+   ```
+   DATABASE_URL=postgresql+psycopg://hockey:hockey@localhost:5432/hockey_calgary
+   ADMIN_PASSWORD=<pick something>
+   ```
 
-### 4. Community Mapping
+3. **Python deps + initial scrape** — to populate the DB:
 
-The scraper attempts to guess the community name from the team name.
-To override or fix mappings, edit `community_map.json`.
+   ```sh
+   pip install -r requirements.txt
+   python scraper.py            # incremental
+   # or: python scraper.py --reset    (full rebuild, drops first)
+   ```
 
-Format:
-```json
-{
-    "Team Name": "Community Name",
-    "GHC Chaos": "Girls Hockey Calgary"
-}
+   Takes ~15 minutes for a full scrape. The web app reads the same DB, so
+   you can also trigger scrapes from its admin UI (step 4).
+
+4. **Web app** — runs on http://localhost:3000:
+
+   ```sh
+   cd web
+   npm install
+   npm run dev
+   ```
+
+   The web app picks up `DATABASE_URL` and `ADMIN_PASSWORD` from the parent
+   `../.env`.
+
+### Database migrations
+
+Alembic owns the schema. New migrations:
+
+```sh
+alembic revision --autogenerate -m "<message>"
+alembic upgrade head
 ```
 
-After editing the map, run `python scraper.py` (or use the "Run Scraper" button in the app) to update the database.
+The scraper's `init_db()` applies pending migrations on first run. For pure
+web-app dev (no scraper invocation), run `alembic upgrade head` manually
+before `npm run dev`.
 
-## Project Structure
+## Deployment
 
-- `app.py`: Streamlit web dashboard.
-- `scraper.py`: Main scraping script.
-- `models.py`: Database models (SQLAlchemy).
-- `database.py`: Database connection setup.
-- `utilities/`: Shared utility functions (e.g., community name normalization).
-- `scripts/`:
-  - `inspection/`: Scripts for debugging and inspecting source HTML/API responses.
-  - `maintenance/`: Scripts for database cleanup and data fixes.
-  - `testing/`: Unit tests and verification scripts.
-  - `legacy/`: Older scraping scripts.
-- `data/`:
-  - `dumps/`: Raw data exports and debug dumps.
-- `community_map.json`: Custom mappings for community names.
-- `hockey_calgary.db`: SQLite database file.
+The app deploys as a single Docker image to Render. The image bundles both
+Node (for the Next.js server) and Python (for the scraper subprocess) so the
+admin "Run Scraper" button can spawn the scraper inside the same container.
+
+### Render setup
+
+1. New → **Web Service** → connect this repo.
+2. **Runtime**: Docker. Dockerfile path: `./Dockerfile`.
+3. Environment variables:
+
+   | Key              | Value                                  |
+   | ---------------- | -------------------------------------- |
+   | `DATABASE_URL`   | Neon connection string                 |
+   | `ADMIN_PASSWORD` | secret of your choosing                |
+   | `PYTHON_BIN`     | `python3`                              |
+
+4. Health check path: `/`.
+
+Pushes to `main` auto-deploy.
+
+### Running a scrape in production
+
+1. Open the deployed app.
+2. Click the lock icon in the top bar → enter `ADMIN_PASSWORD` → Unlock.
+3. Click **Run scraper**. Choose *Update* (additive) or *Full reset*.
+4. The page shows a live progress banner with elapsed time + the latest log
+   line, and auto-refreshes when the run finishes.
+
+> ⚠️ The scraper subprocess runs inside the web container. A Render restart
+> or redeploy mid-scrape will kill it. Fine for manual single-user use;
+> fragile for unattended cron. Moving the scraper to a separate Render
+> service is on the roadmap.
+
+## Project layout
+
+```
+.
+├── scraper.py              # Python scraper (~1300 lines)
+├── models.py               # SQLAlchemy schema
+├── database.py             # SQLAlchemy engine + init_db()
+├── alembic/                # DB migrations
+├── utilities/              # Shared Python helpers (tiering, team labels)
+├── data/reference/         # Static reference data (community → neighborhood etc.)
+├── scripts/                # One-off maintenance / inspection scripts
+├── docker-compose.yml      # Local Postgres
+├── Dockerfile              # Production image (Node + Python)
+└── web/                    # Next.js app
+    └── src/
+        ├── app/
+        │   ├── page.tsx               # / — Analytics page
+        │   ├── analytics/             # Analytics page components
+        │   ├── dilution/              # /dilution — Tier 1 Dilution
+        │   └── api/
+        │       ├── admin/             # unlock / lock
+        │       └── scraper/           # run / status / log
+        ├── components/                # Shared client components
+        └── lib/
+            ├── db/                    # Drizzle + pg pool
+            └── analytics/             # Filter + computation logic
+```
+
+## License
+
+MIT.

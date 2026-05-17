@@ -36,7 +36,6 @@ type Props = {
   state: FilterState;
   setState: (next: FilterState) => void;
   defaultState: FilterState;
-  stickyTop?: number;
   allSeasons: string[];
   allTypes: string[];
   allAges: string[];
@@ -55,7 +54,7 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
     overflowY: 'auto',
-    position: 'sticky',
+    height: '100%',
     boxSizing: 'border-box',
   },
   header: {
@@ -158,7 +157,6 @@ export function FiltersPanel({
   state,
   setState,
   defaultState,
-  stickyTop = 0,
   allSeasons,
   allTypes,
   allAges,
@@ -168,10 +166,6 @@ export function FiltersPanel({
   availableTeams,
 }: Props) {
   const s = useStyles();
-  const asideStyle = {
-    top: stickyTop,
-    height: `calc(100vh - ${stickyTop}px)`,
-  };
   const update = <K extends keyof FilterState>(key: K, value: FilterState[K]) =>
     setState({ ...state, [key]: value });
 
@@ -179,7 +173,7 @@ export function FiltersPanel({
   const activeCount = countActiveFilters(state, defaultState);
 
   return (
-    <aside className={s.aside} style={asideStyle}>
+    <aside className={s.aside}>
       <div className={s.header}>
         <div className={s.headerLeft}>
           <Filter20Regular />
