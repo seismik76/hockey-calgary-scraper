@@ -1,0 +1,53 @@
+# Source control
+.git
+.gitignore
+.github
+
+# Editor / IDE
+.vscode
+.idea
+*.swp
+
+# Python local
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+.pytest_cache
+.ruff_cache
+.mypy_cache
+
+# Node local
+web/node_modules
+web/.next
+web/.turbo
+web/out
+web/dev.log
+
+# Local secrets / data dumps
+.env
+.env.local
+*.env.local
+scrape_log.txt
+debug_*.txt
+*.log
+
+# Docker / Render artifacts (we don't need the image to copy back its own context)
+Dockerfile
+.dockerignore
+
+# Markdown and ad-hoc files that bloat the build context without affecting runtime
+*.md
+*.pdf
+patch_done.txt
+wikipedia_snippet.txt
+
+# Streamlit-only entry point — the new web app supersedes it. Keep it on disk
+# but don't ship it to the image.
+app.py
+run_app.bat
+
+# Loose debug/inspection scripts the scraper doesn't import at runtime.
+scripts/inspection/
+scripts/testing/

@@ -1312,4 +1312,11 @@ def _do_sync(progress_callback=None):
 
 
 if __name__ == "__main__":
-    sync_data()
+    import argparse
+    parser = argparse.ArgumentParser(description="Scrape Hockey Calgary / RAMP / TeamLinkt.")
+    parser.add_argument(
+        "--reset", action="store_true",
+        help="Drop existing data before scraping (full rebuild).",
+    )
+    args = parser.parse_args()
+    sync_data(reset=args.reset)

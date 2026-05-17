@@ -11,6 +11,7 @@ import sys
 from io import StringIO
 import time
 from utilities.tiering_logic import parse_tier_info, calculate_compliance, get_u11_u13_distribution, get_u15_u18_split, get_u15_u18_tier_distribution
+from utilities.utils import standardize_team_label, extract_tier_label
 
 # Admin gate — controls visibility of the "Run Scraper" UI. If ADMIN_PASSWORD
 # isn't set, the admin UI is hidden entirely (correct posture for any public
@@ -131,6 +132,16 @@ def load_data():
 
         # Pull the age category (U9, U11, ..., U21) out of the league name via regex.
         df['Age Category'] = df['League'].str.extract(r'(U\d{1,2})', expand=False).fillna('Other')
+
+        # Tier label per row: 'AA', 'HADP', '1'..'6', or 'Other'.
+        df['Tier'] = df['League'].apply(extract_tier_label)
+
+        # Composed, consistent team display label — used wherever a Team appears
+        # on screen. The raw `team.name` stays as `Team` for audit/CSV export.
+        df['Team Label'] = df.apply(
+            lambda r: standardize_team_label(r['Team'], r['League'], r['Community']),
+            axis=1,
+        )
 
         # Exclude Girls Hockey Calgary from the headline analytics.
         df = df[df['Community'] != 'Girls Hockey Calgary']
@@ -300,6 +311,12 @@ if page == "Analytics":
         default_ages = [a for a in ['U11', 'U13'] if a in age_categories] or age_categories
         selected_ages = st.multiselect("Age Category", age_categories, default=default_ages)
 
+        # Tier: AA / HADP / 1-6 / Other — ordered for usefulness, not alphabet.
+        _TIER_ORDER = ['AA', 'HADP', '1', '2', '3', '4', '5', '6', 'Other']
+        present_tiers = set(df['Tier'].unique())
+        tier_options = [t for t in _TIER_ORDER if t in present_tiers]
+        selected_tiers = st.multiselect("Tier", tier_options, default=tier_options)
+
         division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
         north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
         south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
@@ -320,7 +337,9 @@ if page == "Analytics":
         ]['League'].unique().tolist())
         selected_leagues = st.multiselect("Leagues", available_leagues, default=[])
 
-        available_teams = sorted(df[df['Community'].isin(selected_communities)]['Team'].unique().tolist())
+        # Use the standardized Team Label for selection — far easier to scan
+        # than the raw upstream names that vary by source/era.
+        available_teams = sorted(df[df['Community'].isin(selected_communities)]['Team Label'].unique().tolist())
         selected_teams = st.multiselect("Teams", available_teams, default=[])
 
     # --- Apply Filters ---
@@ -335,6 +354,9 @@ if page == "Analytics":
     if selected_ages:
         filtered_df = filtered_df[filtered_df['Age Category'].isin(selected_ages)]
 
+    if selected_tiers:
+        filtered_df = filtered_df[filtered_df['Tier'].isin(selected_tiers)]
+
     if selected_communities:
         filtered_df = filtered_df[filtered_df['Community'].isin(selected_communities)]
 
@@ -342,7 +364,7 @@ if page == "Analytics":
         filtered_df = filtered_df[filtered_df['League'].isin(selected_leagues)]
 
     if selected_teams:
-        filtered_df = filtered_df[filtered_df['Team'].isin(selected_teams)]
+        filtered_df = filtered_df[filtered_df['Team Label'].isin(selected_teams)]
 
     # Single download — defaults to the current filtered view; toggle to get everything.
     st.sidebar.markdown("---")
@@ -416,11 +438,21 @@ if page == "Analytics":
     # 3. Detailed Stats View
     st.subheader("📋 Detailed Data")
     with st.expander("View Raw Data"):
+        # Lead with the standardized Team Label; raw Team / League / Stream still
+        # available by scrolling, useful for audit and CSV export.
+        display_cols = [
+            'Team Label', 'Community', 'Season', 'Age Category', 'Tier', 'Type',
+            'GP', 'W', 'L', 'T', 'PTS', 'GF', 'GA', 'Diff',
+            'Win %', 'Points %', 'Goal Diff/Game',
+            'Team', 'League', 'Stream', 'Source',
+        ]
+        display_cols = [c for c in display_cols if c in filtered_df.columns]
         st.dataframe(
-            filtered_df,
+            filtered_df[display_cols],
             column_config={
-                "Source": st.column_config.LinkColumn("Source URL")
-            }
+                "Source": st.column_config.LinkColumn("Source URL"),
+            },
+            use_container_width=True,
         )
 
     # 4. Head-to-Head Matrix (Heatmap)
@@ -491,6 +523,12 @@ elif page == "Tier 1 Dilution Analysis":
         default_ages = [a for a in ['U11', 'U13'] if a in age_categories] or age_categories
         selected_ages = st.multiselect("Age Category", age_categories, default=default_ages)
 
+        # Tier: AA / HADP / 1-6 / Other — ordered for usefulness, not alphabet.
+        _TIER_ORDER = ['AA', 'HADP', '1', '2', '3', '4', '5', '6', 'Other']
+        present_tiers = set(df['Tier'].unique())
+        tier_options = [t for t in _TIER_ORDER if t in present_tiers]
+        selected_tiers = st.multiselect("Tier", tier_options, default=tier_options)
+
         division = st.radio("Hockey Calgary Division", ["All", "North", "South"], index=0, horizontal=True)
         north_communities = ['Springbank', 'North West', 'Bow River', 'McKnight', 'Raiders']
         south_communities = ['Trails West', 'Glenlake', 'Bow Valley', 'Knights', 'Southwest', 'Wolverines']
@@ -510,6 +548,7 @@ elif page == "Tier 1 Dilution Analysis":
         (df['Season'].isin(selected_seasons)) &
         (df['Type'].isin(selected_types)) &
         (df['Age Category'].isin(selected_ages)) &
+        (df['Tier'].isin(selected_tiers)) &
         (df['Community'].isin(selected_communities))
     ].copy()
     

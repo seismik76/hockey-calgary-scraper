@@ -1,0 +1,37 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI Variable',
+    'Segoe UI', system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Tighten optical letter-spacing on Fluent's headline styles — Inter at large
+   sizes looks better with slightly negative tracking. The class names match
+   FluentUI v9's typography components. */
+:where(.fui-LargeTitle, h1) {
+  letter-spacing: -0.022em;
+  font-weight: 700;
+}
+
+:where(.fui-Title1, .fui-Title2, .fui-Title3) {
+  letter-spacing: -0.015em;
+}
+
+:where(.fui-Subtitle1, .fui-Subtitle2) {
+  letter-spacing: -0.008em;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}

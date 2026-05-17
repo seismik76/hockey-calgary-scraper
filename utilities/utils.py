@@ -2,7 +2,94 @@ import re
 import json
 import os
 
+from utilities.tiering_logic import parse_tier_info
+
 MAP_FILE = "community_map.json"
+
+# Tokens recognised as "team colour" suffixes. Lower-case lookup.
+_TEAM_COLOR_TOKENS = {
+    'red', 'blue', 'white', 'black', 'gold', 'silver', 'green', 'yellow',
+    'grey', 'gray', 'orange', 'teal', 'navy', 'maroon', 'purple', 'pink',
+    'lime', 'cyan', 'magenta', 'brown', 'beige', 'royal', 'sky',
+}
+
+
+def parse_team_differentiator(team_name):
+    """
+    Extract (number, color) from the trailing tokens of a team name.
+
+    Upstream sources format team names inconsistently — the constants we can
+    reliably recover are the team's number (1, 2, ...) and color suffix (Red,
+    Gold, ...). Everything else (community, age, tier) lives on the league row
+    already, so we don't need to parse it from the team name.
+
+    Examples:
+      "Southwest 2 Gold"               -> (2, "Gold")
+      "U11 BOW RIVER BRUINS 4 BLACK"   -> (4, "Black")
+      "Southwest U11 AA"               -> (None, None)
+      "Bow River HADP"                 -> (None, None)
+    """
+    tokens = (team_name or '').split()
+    color = None
+    if tokens and tokens[-1].lower() in _TEAM_COLOR_TOKENS:
+        color = tokens[-1].title()
+        tokens = tokens[:-1]
+    number = None
+    if tokens and tokens[-1].isdigit():
+        number = int(tokens[-1])
+    return number, color
+
+
+def extract_tier_label(league_name):
+    """
+    Return a short, comparable tier label: 'AA', 'HADP', '1', '2', ..., or 'Other'.
+
+    parse_tier_info collapses AA and HADP into a single 'AA' bucket; we
+    disambiguate here from the raw league name so users can filter on HADP
+    separately from AA.
+    """
+    info = parse_tier_info(league_name or '')
+    tier = info.get('tier')
+    upper = (league_name or '').upper()
+    if tier == 'AA':
+        return 'HADP' if 'HADP' in upper else 'AA'
+    if isinstance(tier, int):
+        return str(tier)
+    return 'Other'
+
+
+def standardize_team_label(team_name, league_name, community):
+    """
+    Compose a clean, consistent team display name from the league + community
+    (the canonical source for age/tier/community) plus the parsed number/color
+    from the team name itself.
+
+      "Southwest 2 Gold" in "U11 Tier 2 South"        -> "Southwest U11 Tier 2 #2 Gold"
+      "BOW RIVER BRUINS U11 AA" in "U11 AA"           -> "Bow River U11 AA"
+      "U18 Tier 2 NBC" team "Knights 2"               -> "Knights U18 Tier 2 NBC #2"
+    """
+    age_match = re.search(r'U\d{1,2}', league_name or '', re.IGNORECASE)
+    age = age_match.group().upper() if age_match else ''
+
+    info = parse_tier_info(league_name or '')
+    tier_label = extract_tier_label(league_name)
+    if tier_label in ('AA', 'HADP'):
+        tier_str = tier_label
+    elif tier_label.isdigit():
+        tier_str = f"Tier {tier_label}"
+        if info.get('stream') == 'NBC':
+            tier_str += ' NBC'
+    else:
+        tier_str = ''
+
+    number, color = parse_team_differentiator(team_name)
+
+    parts = [community or '', age, tier_str]
+    if number is not None:
+        parts.append(f"#{number}")
+    if color:
+        parts.append(color)
+    return ' '.join(p for p in parts if p)
 
 # Allowed Communities (User Specified)
 ALLOWED_COMMUNITIES = {
