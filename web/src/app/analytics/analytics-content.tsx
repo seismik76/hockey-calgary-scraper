@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Body1,
   Caption1,
@@ -8,10 +8,18 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import type { StandingRow } from '@/lib/analytics/data';
-import { METRICS } from '@/lib/analytics/metrics';
 import { applyFilters, uniqueSorted, type FilterState } from '@/lib/analytics/filters';
+import {
+  getArray,
+  putArrayIfChanged,
+  sameArr,
+  useUrlFilterState,
+} from '@/lib/url-filter-state';
 import { TIER_ORDER } from '@/lib/analytics/tiering';
-import { FiltersPanel } from './filters-panel';
+import { FilterShell } from '@/components/filter-shell';
+import { METRICS, METRIC_LABELS, type MetricLabel } from '@/lib/analytics/metrics';
+import { type Division } from '@/lib/analytics/communities';
+import { type TierLabel } from '@/lib/analytics/tiering';
 import { MetricCards } from './metric-cards';
 import { RankingSection } from './ranking-section';
 import { DetailTable } from './detail-table';
@@ -173,7 +181,39 @@ export function AnalyticsContent({
     [allSeasons, allTypes, allAges, allTiers, allCommunities],
   );
 
-  const [state, setState] = useState<FilterState>(defaultState);
+  const encode = useCallback(
+    (s: FilterState, d: FilterState): URLSearchParams => {
+      const p = new URLSearchParams();
+      if (s.metric !== d.metric) p.set('metric', s.metric);
+      putArrayIfChanged(p, 'seasons', s.seasons, d.seasons);
+      putArrayIfChanged(p, 'types', s.types, d.types);
+      putArrayIfChanged(p, 'ages', s.ages, d.ages);
+      putArrayIfChanged(p, 'tiers', s.tiers, d.tiers);
+      if (s.division !== d.division) p.set('division', s.division);
+      putArrayIfChanged(p, 'communities', s.communities, d.communities);
+      if (s.leagues.length) p.set('leagues', s.leagues.join(','));
+      if (s.teams.length) p.set('teams', s.teams.join(','));
+      return p;
+    },
+    [],
+  );
+
+  const decode = useCallback(
+    (p: URLSearchParams, d: FilterState): FilterState => ({
+      metric: (p.get('metric') as MetricLabel) ?? d.metric,
+      seasons: getArray(p, 'seasons', d.seasons),
+      types: getArray(p, 'types', d.types),
+      ages: getArray(p, 'ages', d.ages),
+      tiers: getArray(p, 'tiers', d.tiers) as TierLabel[],
+      division: (p.get('division') as Division) ?? d.division,
+      communities: getArray(p, 'communities', d.communities),
+      leagues: getArray(p, 'leagues', []),
+      teams: getArray(p, 'teams', []),
+    }),
+    [],
+  );
+
+  const [state, setState] = useUrlFilterState(defaultState, encode, decode);
   const [navOpen, setNavOpen] = useState(false);
   const closeNav = () => setNavOpen(false);
 
@@ -213,6 +253,17 @@ export function AnalyticsContent({
 
   const metricKey = METRICS[state.metric];
 
+  const activeCount =
+    (state.metric !== defaultState.metric ? 1 : 0) +
+    (sameArr(state.seasons, defaultState.seasons) ? 0 : 1) +
+    (sameArr(state.types, defaultState.types) ? 0 : 1) +
+    (sameArr(state.ages, defaultState.ages) ? 0 : 1) +
+    (sameArr(state.tiers, defaultState.tiers) ? 0 : 1) +
+    (state.division !== defaultState.division ? 1 : 0) +
+    (sameArr(state.communities, defaultState.communities) ? 0 : 1) +
+    (state.leagues.length ? 1 : 0) +
+    (state.teams.length ? 1 : 0);
+
   return (
     <div className={s.shell}>
       <div className={s.topbar}>
@@ -241,17 +292,56 @@ export function AnalyticsContent({
       />
 
       <div className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
-        <FiltersPanel
-          state={state}
-          setState={setState}
-          defaultState={defaultState}
-          allSeasons={allSeasons}
-          allTypes={allTypes}
-          allAges={allAges}
-          allTiers={allTiers}
-          allCommunities={allCommunities}
-          availableLeagues={availableLeagues}
-          availableTeams={availableTeams}
+        <FilterShell
+          activeCount={activeCount}
+          onReset={() => setState(defaultState)}
+          metric={{
+            value: state.metric,
+            options: METRIC_LABELS,
+            onChange: (next) => setState({ ...state, metric: next as MetricLabel }),
+          }}
+          seasons={{
+            values: state.seasons,
+            options: allSeasons,
+            onChange: (next) => setState({ ...state, seasons: next }),
+          }}
+          types={{
+            values: state.types,
+            options: allTypes,
+            onChange: (next) => setState({ ...state, types: next }),
+          }}
+          ages={{
+            values: state.ages,
+            options: allAges,
+            onChange: (next) => setState({ ...state, ages: next }),
+          }}
+          tiers={{
+            values: state.tiers,
+            options: allTiers,
+            onChange: (next) => setState({ ...state, tiers: next as TierLabel[] }),
+          }}
+          division={{
+            value: state.division,
+            allCommunities,
+            onChange: (next: Division) => setState({ ...state, division: next }),
+          }}
+          communities={{
+            values: state.communities,
+            options: allCommunities,
+            onChange: (next) => setState({ ...state, communities: next }),
+          }}
+          refine={{
+            leagues: {
+              values: state.leagues,
+              options: availableLeagues,
+              onChange: (next) => setState({ ...state, leagues: next }),
+            },
+            teams: {
+              values: state.teams,
+              options: availableTeams,
+              onChange: (next) => setState({ ...state, teams: next }),
+            },
+          }}
         />
       </div>
 

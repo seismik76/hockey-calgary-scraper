@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Body1,
   Caption1,
@@ -9,17 +9,26 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import type { StandingRow } from '@/lib/analytics/data';
-import { TIER_ORDER } from '@/lib/analytics/tiering';
+import { TIER_ORDER, type TierLabel } from '@/lib/analytics/tiering';
 import {
   computeDilution,
+  DILUTION_METRIC_LABELS,
   type DilutionFilterState,
+  type DilutionMetricLabel,
 } from '@/lib/analytics/dilution';
+import { type Division } from '@/lib/analytics/communities';
+import {
+  getArray,
+  putArrayIfChanged,
+  sameArr,
+  useUrlFilterState,
+} from '@/lib/url-filter-state';
 import { TopBar } from '@/components/top-bar';
 import { AdminPanel, type ScraperRun } from '@/components/admin-panel';
 import { DriftBanner, type SerializedDrift } from '@/components/drift-banner';
 import { CoveragePopover } from '@/components/coverage-popover';
 import { ScrapeProgressBanner } from '@/components/scrape-progress';
-import { DilutionFilters } from './dilution-filters';
+import { FilterShell } from '@/components/filter-shell';
 import { HeadlineResult } from './headline-result';
 import { ThresholdTable } from './threshold-table';
 import { CliffChart } from './cliff-chart';
@@ -183,11 +192,48 @@ export function DilutionContent({
     [allSeasons, allTypes, allAges, allTiers, allCommunities],
   );
 
-  const [state, setState] = useState<DilutionFilterState>(defaultState);
+  const encode = useCallback(
+    (s: DilutionFilterState, d: DilutionFilterState): URLSearchParams => {
+      const p = new URLSearchParams();
+      if (s.metric !== d.metric) p.set('metric', s.metric);
+      putArrayIfChanged(p, 'seasons', s.seasons, d.seasons);
+      putArrayIfChanged(p, 'types', s.types, d.types);
+      putArrayIfChanged(p, 'ages', s.ages, d.ages);
+      putArrayIfChanged(p, 'tiers', s.tiers, d.tiers);
+      if (s.division !== d.division) p.set('division', s.division);
+      putArrayIfChanged(p, 'communities', s.communities, d.communities);
+      return p;
+    },
+    [],
+  );
+
+  const decode = useCallback(
+    (p: URLSearchParams, d: DilutionFilterState): DilutionFilterState => ({
+      metric: (p.get('metric') as DilutionMetricLabel) ?? d.metric,
+      seasons: getArray(p, 'seasons', d.seasons),
+      types: getArray(p, 'types', d.types),
+      ages: getArray(p, 'ages', d.ages),
+      tiers: getArray(p, 'tiers', d.tiers),
+      division: (p.get('division') as Division) ?? d.division,
+      communities: getArray(p, 'communities', d.communities),
+    }),
+    [],
+  );
+
+  const [state, setState] = useUrlFilterState(defaultState, encode, decode);
   const [navOpen, setNavOpen] = useState(false);
   const closeNav = () => setNavOpen(false);
 
   const result = useMemo(() => computeDilution(rows, state), [rows, state]);
+
+  const activeCount =
+    (state.metric !== defaultState.metric ? 1 : 0) +
+    (sameArr(state.seasons, defaultState.seasons) ? 0 : 1) +
+    (sameArr(state.types, defaultState.types) ? 0 : 1) +
+    (sameArr(state.ages, defaultState.ages) ? 0 : 1) +
+    (sameArr(state.tiers, defaultState.tiers) ? 0 : 1) +
+    (state.division !== defaultState.division ? 1 : 0) +
+    (sameArr(state.communities, defaultState.communities) ? 0 : 1);
 
   return (
     <div className={s.shell}>
@@ -216,15 +262,46 @@ export function DilutionContent({
       />
 
       <div className={`${s.sidebar} ${navOpen ? s.sidebarOpen : ''}`}>
-        <DilutionFilters
-          state={state}
-          setState={setState}
-          defaultState={defaultState}
-          allSeasons={allSeasons}
-          allTypes={allTypes}
-          allAges={allAges}
-          allTiers={allTiers}
-          allCommunities={allCommunities}
+        <FilterShell
+          activeCount={activeCount}
+          onReset={() => setState(defaultState)}
+          metric={{
+            label: 'Performance metric',
+            value: state.metric,
+            options: DILUTION_METRIC_LABELS,
+            onChange: (next) =>
+              setState({ ...state, metric: next as DilutionMetricLabel }),
+          }}
+          seasons={{
+            values: state.seasons,
+            options: allSeasons,
+            onChange: (next) => setState({ ...state, seasons: next }),
+          }}
+          types={{
+            values: state.types,
+            options: allTypes,
+            onChange: (next) => setState({ ...state, types: next }),
+          }}
+          ages={{
+            values: state.ages,
+            options: allAges,
+            onChange: (next) => setState({ ...state, ages: next }),
+          }}
+          tiers={{
+            values: state.tiers as TierLabel[],
+            options: allTiers,
+            onChange: (next) => setState({ ...state, tiers: next }),
+          }}
+          division={{
+            value: state.division,
+            allCommunities,
+            onChange: (next: Division) => setState({ ...state, division: next }),
+          }}
+          communities={{
+            values: state.communities,
+            options: allCommunities,
+            onChange: (next) => setState({ ...state, communities: next }),
+          }}
         />
       </div>
 
