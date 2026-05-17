@@ -119,7 +119,8 @@ admin "Run Scraper" button can spawn the scraper inside the same container.
    | `ADMIN_PASSWORD` | secret of your choosing                |
    | `PYTHON_BIN`     | `python3`                              |
 
-4. Health check path: `/`.
+4. Health check path: `/api/health` (returns 503 if Postgres is unreachable;
+   the default `/` only proves the port is open).
 
 Pushes to `main` auto-deploy.
 

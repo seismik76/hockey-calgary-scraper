@@ -31,6 +31,7 @@ RUN apt-get update \
         libpq5 \
         ca-certificates \
         tini \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production \
@@ -64,6 +65,14 @@ COPY --from=web-build /app/web/public ./web/public
 # Render exposes whichever PORT it injects; default to 10000 locally.
 ENV PORT=10000
 EXPOSE 10000
+
+# Container-level health check. Renders ignores this for routing decisions
+# (they use the dashboard-configured health check path), but it's useful for
+# `docker ps` locally and any non-Render runtime. /api/health does a real
+# `SELECT 1` against Postgres — flags "process is up but DB is broken" cases
+# that a port-only check misses.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://localhost:${PORT}/api/health" > /dev/null || exit 1
 
 # `tini` reaps zombie child processes — important because the API route spawns
 # `python3 scraper.py` detached and we don't want orphans accumulating.
