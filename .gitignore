@@ -37,3 +37,7 @@ Thumbs.db
 !association_neighborhoods.json
 !neighborhood_incomes.json
 !calgary_2021_census_incomes.json
+# Node project manifests live in web/ — must be tracked or `npm ci` can't run.
+!web/package.json
+!web/package-lock.json
+!web/tsconfig.json
