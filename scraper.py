@@ -9,7 +9,7 @@ from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from database import init_db, SessionLocal, engine
 from models import Season, League, Team, Community, Standing, ScrapeRun, Base
-from utilities.utils import normalize_community_name, load_community_map, save_community_map
+from utilities.utils import normalize_community_name, normalize_team_name, load_community_map, save_community_map
 import urllib3
 from collections import defaultdict
 import re
@@ -661,11 +661,15 @@ def save_standings(db, data, season, league, community_map, source_url=None):
     if not data:
         return
 
-    # 1. Filter out teams whose community we can't resolve.
+    # 1. Filter out teams whose community we can't resolve, and canonicalise
+    #    casing on the team name. RAMP feeds report ALL-CAPS, tournament feeds
+    #    report mixed case — without this step the same team produces two
+    #    Team rows with split standings.
     rows = []
     for entry in data:
         comm_name = normalize_community_name(entry['team'], community_map)
         if comm_name:
+            entry['team'] = normalize_team_name(entry['team'])
             rows.append((entry, comm_name))
 
     if not rows:

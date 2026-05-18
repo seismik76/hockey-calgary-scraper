@@ -13,6 +13,38 @@ _TEAM_COLOR_TOKENS = {
     'lime', 'cyan', 'magenta', 'brown', 'beige', 'royal', 'sky',
 }
 
+# Words to preserve in upper case when normalising an all-caps team name.
+# Anything else gets Title-cased. Age tokens like "U11"/"U13" are handled
+# separately via the "contains-a-digit" check.
+_HOCKEY_ACRONYMS = {'AA', 'AAA', 'HADP', 'NBC', 'BC'}
+
+
+def normalize_team_name(name):
+    """
+    Canonicalise team-name casing.
+
+    Upstream RAMP / Alberta One scrapes report team names entirely in upper
+    case (`KNIGHTS U11 AA`), while the City Championships / Esso tournament
+    feeds report them in mixed case (`Knights U11 AA`). Stored as-is, the
+    two variants become separate Team rows with split standings.
+
+    Strategy: leave already-mixed-case names alone; for fully-upper inputs,
+    Title-case each word except recognised hockey acronyms (`AA`, `HADP`,
+    etc.) and tokens containing digits (`U11`, `U13`).
+    """
+    if not name:
+        return name
+    name = name.strip()
+    # Already mixed-case → trust the upstream and leave it alone.
+    if any(c.islower() for c in name):
+        return name
+    return ' '.join(
+        word
+        if (any(c.isdigit() for c in word) or word.upper() in _HOCKEY_ACRONYMS)
+        else word.title()
+        for word in name.split()
+    )
+
 
 def parse_team_differentiator(team_name):
     """
