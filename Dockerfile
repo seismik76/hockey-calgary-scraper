@@ -53,7 +53,7 @@ COPY scraper.py models.py database.py alembic.ini ./
 COPY utilities/ ./utilities/
 COPY alembic/ ./alembic/
 COPY data/ ./data/
-COPY community_map.json association_neighborhoods.json calgary_2021_census_incomes.json neighborhood_incomes.json ./
+COPY community_map.json ./
 
 # Next.js standalone bundle. The build output puts `server.js` at the root of
 # the standalone tree, plus a minimal `node_modules/`. Static assets and

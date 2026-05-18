@@ -3,8 +3,8 @@ import csv
 import os
 
 def generate_income_template():
-    # Load the association mapping
-    json_path = 'association_neighborhoods.json'
+    # Load the association mapping (canonical copy lives in data/reference/).
+    json_path = 'data/reference/association_neighborhoods.json'
     if not os.path.exists(json_path):
         print(f"Error: {json_path} not found.")
         return
