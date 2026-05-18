@@ -14,7 +14,13 @@ export const leagues = pgTable(
     stream: text('stream').notNull(),
     type: text('type').default('Regular'),
   },
-  (t) => [unique('_league_slug_stream_type_uc').on(t.slug, t.stream, t.type)],
+  (t) => [
+    unique('_league_slug_stream_type_uc').on(t.slug, t.stream, t.type),
+    // Mirrors the constraint added by Alembic migration a3c1d8e2f4b5: keeps
+    // upstream duplicates with different slugs but the same name from
+    // sneaking in as separate league rows.
+    unique('_league_name_stream_type_uc').on(t.name, t.stream, t.type),
+  ],
 );
 
 export const communities = pgTable('communities', {

@@ -212,34 +212,66 @@ def get_ramp_leagues():
 def get_teamlinkt_leagues():
     """
     Scrapes U13+ leagues from TeamLinkt.
+
+    TeamLinkt's hierarchy_filter dropdown sometimes lists the *same* league
+    under multiple "association" hierarchies — e.g. both `260972-260985` and
+    `249020-249139` for U13 Tier 5 South. Each option points at a different
+    upstream API endpoint, but they return effectively the same standings.
+    Treating them as distinct leagues produces duplicate `leagues` rows and
+    inflates downstream `standings` counts.
+
+    Dedupe by display name; when two options share a name, prefer the one
+    with the higher numeric slug prefix (the newer hierarchy ID — TeamLinkt
+    appears to mint these monotonically, and empirically the higher prefix
+    is the one that contains real data; the lower prefix is often an empty
+    legacy stub).
     """
     url = "https://leagues.teamlinkt.com/hockeycalgary/Standings"
     soup = get_soup(url)
     if not soup:
         return []
-        
-    leagues = []
-    # Find the hierarchy_filter select
+
     select = soup.find('select', {'name': 'hierarchy_filter'}) or soup.find('select', {'id': 'hierarchy_filter'})
-    
-    if select:
-        options = select.find_all('option')
-        for opt in options:
-            name = opt.get_text(strip=True)
-            value = opt.get('value')
-            if value and value != '0':
-                # Exclude U15 from TeamLinkt as it is sourced from Community Council
-                if 'U15' in name:
-                    continue
-                    
-                leagues.append({
-                    'name': name,
-                    'slug': value,
-                    'stream': 'TeamLinkt',
-                    'url': f"{url}?hierarchy_filter={value}",
-                    'type': 'Regular'
-                })
-    return leagues
+    if not select:
+        return []
+
+    # First pass: collect raw options, attach the slug prefix for comparison.
+    raw = []
+    for opt in select.find_all('option'):
+        name = opt.get_text(strip=True)
+        value = opt.get('value')
+        if not value or value == '0':
+            continue
+        # Exclude U15 from TeamLinkt as it is sourced from Community Council
+        if 'U15' in name:
+            continue
+        try:
+            prefix = int((value.split('-', 1)[0] or '0'))
+        except ValueError:
+            prefix = 0
+        raw.append({'name': name, 'slug': value, 'prefix': prefix})
+
+    # Second pass: dedupe by name, keep the entry with the highest prefix.
+    by_name = {}
+    for r in raw:
+        existing = by_name.get(r['name'])
+        if existing is None or r['prefix'] > existing['prefix']:
+            by_name[r['name']] = r
+
+    dropped = len(raw) - len(by_name)
+    if dropped:
+        print(f"  TeamLinkt: dropped {dropped} duplicate league option(s); kept higher-prefix slugs")
+
+    return [
+        {
+            'name': r['name'],
+            'slug': r['slug'],
+            'stream': 'TeamLinkt',
+            'url': f"{url}?hierarchy_filter={r['slug']}",
+            'type': 'Regular',
+        }
+        for r in by_name.values()
+    ]
 
 def get_tournaments(season_slug):
     tournaments = [

@@ -16,7 +16,17 @@ class League(Base):
     slug = Column(String, nullable=False) # e.g., "u11-tier-1"
     stream = Column(String, nullable=False) # e.g., "community-council"
     type = Column(String, default='Regular') # 'Regular', 'Playoff', 'Tournament', 'Pre-season'
-    __table_args__ = (UniqueConstraint('slug', 'stream', 'type', name='_league_slug_stream_type_uc'),)
+    # Two constraints, both load-bearing:
+    #   - (slug, stream, type): the upstream URL identity. Different slugs are
+    #     genuinely different upstream resources.
+    #   - (name, stream, type): the semantic identity. TeamLinkt sometimes
+    #     exposes the same league under two hierarchy IDs (different slugs,
+    #     identical name) — without this constraint the second one slips
+    #     through as a duplicate league row.
+    __table_args__ = (
+        UniqueConstraint('slug', 'stream', 'type', name='_league_slug_stream_type_uc'),
+        UniqueConstraint('name', 'stream', 'type', name='_league_name_stream_type_uc'),
+    )
 
 class Community(Base):
     __tablename__ = 'communities'
