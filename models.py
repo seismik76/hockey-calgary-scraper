@@ -77,6 +77,37 @@ class Standing(Base):
     __table_args__ = (UniqueConstraint('season_id', 'league_id', 'team_id', name='_standing_uc'),)
 
 
+class Game(Base):
+    __tablename__ = 'games'
+    id = Column(Integer, primary_key=True)
+    season_id = Column(Integer, ForeignKey('seasons.id'), nullable=False)
+    league_id = Column(Integer, ForeignKey('leagues.id'), nullable=False)
+    home_team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
+    away_team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
+    home_score = Column(Integer, nullable=False)
+    away_score = Column(Integer, nullable=False)
+    # Nullable: HC legacy gives a date only; RAMP/TeamLinkt give a full timestamp.
+    played_at = Column(DateTime)
+    venue = Column(String)
+    # 'Regular', 'Seeding', 'Playoff', 'Tournament' — copied from the upstream row, not
+    # necessarily equal to leagues.type (RAMP can mix game types under one league).
+    game_type = Column(String, default='Regular')
+    # 'RAMP', 'TeamLinkt', 'hockeycalgary' — drives parser selection on re-scrape.
+    source = Column(String, nullable=False)
+    # Upstream's stable id for the game; used as the primary dedupe key.
+    source_game_id = Column(String, nullable=False)
+    source_url = Column(String)
+
+    season = relationship("Season")
+    league = relationship("League")
+    home_team = relationship("Team", foreign_keys=[home_team_id])
+    away_team = relationship("Team", foreign_keys=[away_team_id])
+
+    __table_args__ = (
+        UniqueConstraint('source', 'source_game_id', name='_game_source_uc'),
+    )
+
+
 class ScrapeRun(Base):
     __tablename__ = 'scrape_runs'
     id = Column(Integer, primary_key=True)

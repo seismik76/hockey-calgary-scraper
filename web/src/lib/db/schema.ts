@@ -59,6 +59,26 @@ export const standings = pgTable(
   (t) => [unique('_standing_uc').on(t.seasonId, t.leagueId, t.teamId)],
 );
 
+export const games = pgTable(
+  'games',
+  {
+    id: serial('id').primaryKey(),
+    seasonId: integer('season_id').notNull().references(() => seasons.id),
+    leagueId: integer('league_id').notNull().references(() => leagues.id),
+    homeTeamId: integer('home_team_id').notNull().references(() => teams.id),
+    awayTeamId: integer('away_team_id').notNull().references(() => teams.id),
+    homeScore: integer('home_score').notNull(),
+    awayScore: integer('away_score').notNull(),
+    playedAt: timestamp('played_at'),
+    venue: text('venue'),
+    gameType: text('game_type').default('Regular'),
+    source: text('source').notNull(),
+    sourceGameId: text('source_game_id').notNull(),
+    sourceUrl: text('source_url'),
+  },
+  (t) => [unique('_game_source_uc').on(t.source, t.sourceGameId)],
+);
+
 export const scrapeRuns = pgTable('scrape_runs', {
   id: serial('id').primaryKey(),
   startedAt: timestamp('started_at').notNull().defaultNow(),

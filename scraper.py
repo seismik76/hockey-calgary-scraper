@@ -1337,8 +1337,25 @@ def _do_sync(progress_callback=None):
     
     # Fetch specific U11 Seeding data for 2024-2025
     if progress_callback:
-        progress_callback(95, "Fetching U11 Seeding data...")
+        progress_callback(93, "Fetching U11 Seeding data...")
     fetch_u11_seeding_2024_2025(community_map)
+
+    # Fetch completed-game results for U11/U13/U15, seasons >= 2024-2025.
+    # Imported here (not at module load) to keep scraper.py importable when
+    # games_scraper has issues — and to avoid circular import (games_scraper
+    # imports SESSION/get_soup from scraper).
+    print("Fetching game-by-game results...")
+    if progress_callback:
+        progress_callback(96, "Fetching game-by-game results...")
+    try:
+        from games_scraper import sync_games
+        stats = sync_games()
+        print(
+            f"  games: {stats.get('inserted', 0)} touched, "
+            f"{stats.get('skipped', 0)} skipped across {stats.get('leagues', 0)} leagues"
+        )
+    except Exception as e:
+        print(f"  Game sync failed (non-fatal): {e}")
 
     print("Sync complete.")
     if progress_callback:

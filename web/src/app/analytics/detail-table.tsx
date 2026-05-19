@@ -14,6 +14,7 @@ import {
   ArrowDown16Regular,
   ArrowSort16Regular,
   ArrowUp16Regular,
+  ArrowRight16Regular,
   DismissCircle20Regular,
   Search20Regular,
   Table24Regular,
@@ -291,6 +292,11 @@ export function DetailTable({ rows }: { rows: StandingRow[] }) {
                 })}
                 <th className={s.th}>
                   <span style={{ padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`, display: 'inline-block' }}>
+                    League
+                  </span>
+                </th>
+                <th className={s.th}>
+                  <span style={{ padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`, display: 'inline-block' }}>
                     Source
                   </span>
                 </th>
@@ -311,6 +317,15 @@ export function DetailTable({ rows }: { rows: StandingRow[] }) {
                       </td>
                     );
                   })}
+                  <td className={s.td}>
+                    <Link
+                      href={`/leagues/${r.seasonId}/${r.leagueId}`}
+                      title={`${r.season} · ${r.league}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                    >
+                      view <ArrowRight16Regular />
+                    </Link>
+                  </td>
                   <td className={s.td}>
                     {r.source ? (
                       <Link href={r.source} target="_blank" rel="noopener noreferrer">

@@ -14,7 +14,13 @@ import {
 } from '@fluentui/react-components';
 import { Navigation20Regular } from '@fluentui/react-icons';
 
-export type TopBarPage = 'analytics' | 'dilution';
+export type TopBarPage = 'analytics' | 'leagues' | 'dilution';
+
+const TAB_HREF: Record<TopBarPage, string> = {
+  analytics: '/',
+  leagues: '/leagues',
+  dilution: '/dilution',
+};
 
 const useStyles = makeStyles({
   bar: {
@@ -140,10 +146,11 @@ export function TopBar({ active, lastUpdated, rightSlot, onMenuClick }: Props) {
             appearance="subtle"
             size="medium"
             onTabSelect={(_, data) =>
-              router.push(data.value === 'dilution' ? '/dilution' : '/')
+              router.push(TAB_HREF[data.value as TopBarPage] ?? '/')
             }
           >
             <Tab value="analytics">Analytics</Tab>
+            <Tab value="leagues">Leagues</Tab>
             <Tab value="dilution">Tier 1 Dilution</Tab>
           </TabList>
         </div>
