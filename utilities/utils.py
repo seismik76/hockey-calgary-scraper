@@ -135,7 +135,12 @@ ALLOWED_COMMUNITIES = {
     "Bow Valley",
     "Wolverines",
     "Knights",
-    "Southwest"
+    "Southwest",
+    # GHC isn't a community-council neighborhood; their teams are tracked at
+    # the city-wide girls' association level. Persisted so game-by-game results
+    # can be attributed; the analytics dashboards already filter them out for
+    # headline metrics via `community !== 'Girls Hockey Calgary'` in data.ts.
+    "Girls Hockey Calgary",
 }
 
 def load_community_map():
