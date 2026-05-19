@@ -136,7 +136,10 @@ export type LeagueIndexEntry = {
   teamCount: number;
 };
 
-// One row per (season, league) pair that has at least one standings row.
+// One row per (season, league) pair that has at least one non-GHC standings
+// row. Girls Hockey Calgary is excluded everywhere in the app — leagues whose
+// only standings are GHC drop out entirely; mixed leagues just show a smaller
+// team count.
 export async function loadLeagueIndex(): Promise<LeagueIndexEntry[]> {
   const result = await db.execute(sql`
     SELECT
@@ -150,6 +153,10 @@ export async function loadLeagueIndex(): Promise<LeagueIndexEntry[]> {
     FROM standings st
     JOIN seasons s ON st.season_id = s.id
     JOIN leagues l ON st.league_id = l.id
+    JOIN teams t ON st.team_id = t.id
+    LEFT JOIN communities c_st ON st.community_id = c_st.id
+    LEFT JOIN communities c_t ON t.community_id = c_t.id
+    WHERE COALESCE(c_st.name, c_t.name) IS DISTINCT FROM 'Girls Hockey Calgary'
     GROUP BY s.id, l.id, s.name, l.name, l.type, l.stream
   `);
   type Row = {
@@ -257,6 +264,100 @@ export async function loadLeagueGames(
     source: r.Source,
     sourceUrl: r.SourceUrl,
   }));
+}
+
+export type CommunityAggregateRow = {
+  community: string;
+  teamCount: number;
+  gp: number;
+  w: number;
+  l: number;
+  t: number;
+  pts: number;
+  gf: number;
+  ga: number;
+  diff: number;
+};
+
+// Aggregate W / L / GF / GA / diff per community across every team that
+// belongs to the given age group in the given season. Excludes AA/HADP
+// (elite tiers), Girls Hockey Calgary, and any non-Regular league types
+// (Seeding / Playoff / Tournament don't count toward season standings).
+export async function loadCommunityAggregates(
+  age: string,
+  season: string,
+): Promise<CommunityAggregateRow[]> {
+  const ageUpper = age.toUpperCase();
+  const result = await db.execute(sql`
+    WITH eligible AS (
+      SELECT
+        COALESCE(c_st.name, c_t.name) AS community,
+        st.team_id,
+        st.gp, st.w, st.l, st.t, st.pts, st.gf, st.ga, st.diff
+      FROM standings st
+      JOIN seasons s ON st.season_id = s.id
+      JOIN leagues l ON st.league_id = l.id
+      JOIN teams t ON st.team_id = t.id
+      LEFT JOIN communities c_st ON st.community_id = c_st.id
+      LEFT JOIN communities c_t ON t.community_id = c_t.id
+      WHERE s.name = ${season}
+        AND l.name ~* ${'\\m' + ageUpper + '\\M'}
+        AND l.type = 'Regular'
+        AND l.name !~* 'AA|HADP'
+        AND COALESCE(c_st.name, c_t.name) IS NOT NULL
+        AND COALESCE(c_st.name, c_t.name) != 'Girls Hockey Calgary'
+    )
+    SELECT
+      community,
+      COUNT(DISTINCT team_id)::int AS team_count,
+      COALESCE(SUM(gp), 0)::int  AS gp,
+      COALESCE(SUM(w), 0)::int   AS w,
+      COALESCE(SUM(l), 0)::int   AS l,
+      COALESCE(SUM(t), 0)::int   AS t,
+      COALESCE(SUM(pts), 0)::int AS pts,
+      COALESCE(SUM(gf), 0)::int  AS gf,
+      COALESCE(SUM(ga), 0)::int  AS ga,
+      COALESCE(SUM(diff), 0)::int AS diff
+    FROM eligible
+    GROUP BY community
+    ORDER BY diff DESC, w DESC, community
+  `);
+
+  return (result.rows as unknown as Array<{
+    community: string;
+    team_count: number;
+    gp: number; w: number; l: number; t: number; pts: number;
+    gf: number; ga: number; diff: number;
+  }>).map((r) => ({
+    community: r.community,
+    teamCount: r.team_count,
+    gp: r.gp, w: r.w, l: r.l, t: r.t, pts: r.pts,
+    gf: r.gf, ga: r.ga, diff: r.diff,
+  }));
+}
+
+// Distinct season names where there is at least one Regular standings row
+// for the given age (excluding AA/HADP and GHC). Used to populate the season
+// selector on /communities/[age] without hardcoding 2025-2026.
+export async function loadAvailableSeasons(age: string): Promise<string[]> {
+  const ageUpper = age.toUpperCase();
+  const result = await db.execute(sql`
+    SELECT DISTINCT s.name AS season
+    FROM standings st
+    JOIN seasons s ON st.season_id = s.id
+    JOIN leagues l ON st.league_id = l.id
+    JOIN teams t ON st.team_id = t.id
+    LEFT JOIN communities c_st ON st.community_id = c_st.id
+    LEFT JOIN communities c_t ON t.community_id = c_t.id
+    WHERE l.name ~* ${'\\m' + ageUpper + '\\M'}
+      AND l.type = 'Regular'
+      AND l.name !~* 'AA|HADP'
+      AND COALESCE(c_st.name, c_t.name) IS NOT NULL
+      AND COALESCE(c_st.name, c_t.name) != 'Girls Hockey Calgary'
+      AND s.name >= '2025-2026'
+    ORDER BY season DESC
+  `);
+  return (result.rows as unknown as Array<{ season: string }>).map((r) => r.season);
 }
 
 export type LeagueDetail = {

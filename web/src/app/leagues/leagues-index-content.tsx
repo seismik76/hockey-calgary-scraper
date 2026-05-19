@@ -19,12 +19,17 @@ import {
   Search20Regular,
 } from '@fluentui/react-icons';
 import { TopBar } from '@/components/top-bar';
+import { TIER_ORDER } from '@/lib/analytics/tiering';
 import type { LeagueIndexEntry } from '@/lib/analytics/data';
 
 type Props = {
   entries: LeagueIndexEntry[];
   lastUpdated: { finishedAt: Date | null; standingsCount: number | null } | null;
 };
+
+// Display order for age groups. Anything not in the list falls to the bottom
+// under "Other" — covers ages we haven't seen + any future U7/U9 additions.
+const AGE_ORDER = ['U7', 'U9', 'U11', 'U13', 'U15', 'U16', 'U18', 'Other'];
 
 const useStyles = makeStyles({
   shell: {
@@ -63,15 +68,66 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalXS,
     flexWrap: 'wrap',
   },
-  group: {
+  ageNav: {
+    position: 'sticky',
+    top: '64px',
+    zIndex: 5,
+    display: 'flex',
+    gap: tokens.spacingHorizontalXS,
+    flexWrap: 'wrap',
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    borderRadius: tokens.borderRadiusLarge,
+    boxShadow: tokens.shadow2,
+  },
+  ageJump: {
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    fontSize: '13px',
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground2,
+    textDecoration: 'none',
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    ':hover': {
+      color: tokens.colorBrandForeground1,
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
+  ageJumpCount: {
+    marginLeft: '4px',
+    color: tokens.colorNeutralForeground3,
+    fontWeight: tokens.fontWeightRegular,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  ageSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    gap: tokens.spacingVerticalL,
+    scrollMarginTop: '140px',
   },
-  groupHead: {
+  ageHead: {
     display: 'flex',
     alignItems: 'baseline',
     gap: tokens.spacingHorizontalS,
+    paddingBottom: tokens.spacingVerticalS,
+    borderBottom: `2px solid ${tokens.colorNeutralStroke2}`,
+  },
+  tierGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+  },
+  tierHead: {
+    display: 'flex',
+    alignItems: 'baseline',
+    gap: tokens.spacingHorizontalS,
+    color: tokens.colorNeutralForeground2,
+    fontSize: '13px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    fontWeight: tokens.fontWeightSemibold,
   },
   grid: {
     display: 'grid',
@@ -120,6 +176,18 @@ const useStyles = makeStyles({
   },
 });
 
+// Pretty-print a tier label for the section heading.
+function tierHeading(tier: string): string {
+  if (tier === 'AA' || tier === 'HADP') return tier;
+  if (/^\d+$/.test(tier)) return `Tier ${tier}`;
+  return 'Other';
+}
+
+// Pretty-print an age label for the section heading.
+function ageHeading(age: string): string {
+  return age === 'Other' ? 'Other ages' : age;
+}
+
 export function LeagueIndexContent({ entries, lastUpdated }: Props) {
   const s = useStyles();
   const [query, setQuery] = useState('');
@@ -145,18 +213,42 @@ export function LeagueIndexContent({ entries, lastUpdated }: Props) {
     });
   }, [entries, query, season]);
 
-  // Group by season, then sort leagues within a season by name.
-  const groups = useMemo(() => {
-    const map = new Map<string, LeagueIndexEntry[]>();
+  // age -> tier -> entries, in display order.
+  const ageGroups = useMemo(() => {
+    const byAge = new Map<string, Map<string, LeagueIndexEntry[]>>();
     for (const e of filtered) {
-      const arr = map.get(e.season) ?? [];
+      const age = AGE_ORDER.includes(e.ageCategory) ? e.ageCategory : 'Other';
+      let byTier = byAge.get(age);
+      if (!byTier) {
+        byTier = new Map<string, LeagueIndexEntry[]>();
+        byAge.set(age, byTier);
+      }
+      const arr = byTier.get(e.tier) ?? [];
       arr.push(e);
-      map.set(e.season, arr);
+      byTier.set(e.tier, arr);
     }
-    for (const arr of map.values()) {
-      arr.sort((a, b) => a.league.localeCompare(b.league));
+    // Order tiers within an age, and leagues within a tier.
+    const result: { age: string; total: number; tiers: { tier: string; items: LeagueIndexEntry[] }[] }[] = [];
+    for (const age of AGE_ORDER) {
+      const byTier = byAge.get(age);
+      if (!byTier) continue;
+      const tiers: { tier: string; items: LeagueIndexEntry[] }[] = [];
+      for (const tier of TIER_ORDER) {
+        const items = byTier.get(tier);
+        if (!items) continue;
+        items.sort((a, b) => a.league.localeCompare(b.league));
+        tiers.push({ tier, items });
+      }
+      // Any tier not in TIER_ORDER (defensive) falls under Other at the end.
+      for (const [tier, items] of byTier) {
+        if (TIER_ORDER.includes(tier as never)) continue;
+        items.sort((a, b) => a.league.localeCompare(b.league));
+        tiers.push({ tier, items });
+      }
+      const total = tiers.reduce((n, t) => n + t.items.length, 0);
+      result.push({ age, total, tiers });
     }
-    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+    return result;
   }, [filtered]);
 
   return (
@@ -166,7 +258,7 @@ export function LeagueIndexContent({ entries, lastUpdated }: Props) {
         <div className={s.header}>
           <Title2 as="h1">Leagues</Title2>
           <Body1 style={{ color: tokens.colorNeutralForeground2 }}>
-            Browse every season + league combination that has standings. Click through for
+            Browse every league with standings, grouped by age and tier. Click through for
             a focused view of one division.
           </Body1>
         </div>
@@ -214,41 +306,61 @@ export function LeagueIndexContent({ entries, lastUpdated }: Props) {
           </div>
         </div>
 
-        {groups.length === 0 ? (
+        {ageGroups.length > 0 && (
+          <nav className={s.ageNav} aria-label="Jump to age group">
+            {ageGroups.map((g) => (
+              <a key={g.age} href={`#age-${g.age}`} className={s.ageJump}>
+                {ageHeading(g.age)}
+                <span className={s.ageJumpCount}>{g.total}</span>
+              </a>
+            ))}
+          </nav>
+        )}
+
+        {ageGroups.length === 0 ? (
           <div className={s.empty}>
             <Body1>No leagues match the current filter.</Body1>
           </div>
         ) : (
-          groups.map(([sn, items]) => (
-            <section key={sn} className={s.group}>
-              <div className={s.groupHead}>
-                <Subtitle1 as="h2">{sn}</Subtitle1>
+          ageGroups.map((g) => (
+            <section key={g.age} id={`age-${g.age}`} className={s.ageSection}>
+              <div className={s.ageHead}>
+                <Subtitle1 as="h2">{ageHeading(g.age)}</Subtitle1>
                 <Caption1 className={s.cardMeta}>
-                  {items.length} league{items.length === 1 ? '' : 's'}
+                  {g.total} league{g.total === 1 ? '' : 's'}
                 </Caption1>
               </div>
-              <div className={s.grid}>
-                {items.map((e) => (
-                  <Link
-                    key={`${e.seasonId}-${e.leagueId}`}
-                    href={`/leagues/${e.seasonId}/${e.leagueId}`}
-                    className={s.card}
-                  >
-                    <div className={s.cardTitle}>
-                      <span>{e.league}</span>
-                      <ArrowRight16Regular />
-                    </div>
-                    <div className={s.cardBadges}>
-                      <Badge appearance="tint" color="brand">{e.ageCategory}</Badge>
-                      <Badge appearance="tint" color="informative">{e.tier}</Badge>
-                      <Badge appearance="tint" color="subtle">{e.type}</Badge>
-                    </div>
-                    <Caption1 className={s.cardMeta}>
-                      {e.teamCount} team{e.teamCount === 1 ? '' : 's'} · {e.stream}
-                    </Caption1>
-                  </Link>
-                ))}
-              </div>
+              {g.tiers.map(({ tier, items }) => (
+                <div key={tier} className={s.tierGroup}>
+                  <div className={s.tierHead}>
+                    {tierHeading(tier)}
+                    <Caption1 className={s.cardMeta}>{items.length}</Caption1>
+                  </div>
+                  <div className={s.grid}>
+                    {items.map((e) => (
+                      <Link
+                        key={`${e.seasonId}-${e.leagueId}`}
+                        href={`/leagues/${e.seasonId}/${e.leagueId}`}
+                        className={s.card}
+                      >
+                        <div className={s.cardTitle}>
+                          <span>{e.league}</span>
+                          <ArrowRight16Regular />
+                        </div>
+                        <div className={s.cardBadges}>
+                          <Badge appearance="tint" color="subtle">{e.type}</Badge>
+                          {season === '' && (
+                            <Badge appearance="tint" color="informative">{e.season}</Badge>
+                          )}
+                        </div>
+                        <Caption1 className={s.cardMeta}>
+                          {e.teamCount} team{e.teamCount === 1 ? '' : 's'} · {e.stream}
+                        </Caption1>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </section>
           ))
         )}

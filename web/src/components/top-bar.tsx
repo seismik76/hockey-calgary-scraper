@@ -14,11 +14,12 @@ import {
 } from '@fluentui/react-components';
 import { Navigation20Regular } from '@fluentui/react-icons';
 
-export type TopBarPage = 'analytics' | 'leagues' | 'dilution';
+export type TopBarPage = 'analytics' | 'leagues' | 'communities' | 'dilution';
 
 const TAB_HREF: Record<TopBarPage, string> = {
   analytics: '/',
   leagues: '/leagues',
+  communities: '/communities/u11',
   dilution: '/dilution',
 };
 
@@ -151,6 +152,7 @@ export function TopBar({ active, lastUpdated, rightSlot, onMenuClick }: Props) {
           >
             <Tab value="analytics">Analytics</Tab>
             <Tab value="leagues">Leagues</Tab>
+            <Tab value="communities">Communities</Tab>
             <Tab value="dilution">Tier 1 Dilution</Tab>
           </TabList>
         </div>
